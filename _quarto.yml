@@ -8,13 +8,14 @@ website:
       - text: "Hands-on Exercise"
         menu: 
           - text: "Geospatial Data Wrangling with R" 
-            href: "Hands-on_Ex/Hands-on_Ex01a.html"
+            href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01a.html"
           - text: "Choropleth Mapping with R" 
-            href: "Hands-on_Ex/Hands-on_Ex01b.html"
+            href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01b.html"
     right:
       - href: index.qmd
         text: Home
-      - about.qmd
+      - href: about.qmd
+        text: About
       
 format:
   html:
