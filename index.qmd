@@ -3,7 +3,3 @@ title: "ISSS626-GAA"
 ---
 
 This website showcases my coursework for **ISSS626-Geospatial Analytics and Applications**.
-
-```{r}
-1 + 1
-```

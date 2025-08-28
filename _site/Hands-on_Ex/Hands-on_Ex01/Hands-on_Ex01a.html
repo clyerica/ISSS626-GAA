@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.33">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Erica Chan">
+
+<title>Geospatial Data Wrangling with R – ISSS626-GAA</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-941d7e14017e1a43777b60853515243b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">ISSS626-GAA</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-hands-on-exercise" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Hands-on Exercise</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-hands-on-exercise">    
+        <li>
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01a.html">
+ <span class="dropdown-text">Geospatial Data Wrangling with R</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01b.html">
+ <span class="dropdown-text">Chloropleth Mapping with R</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">1. Getting Started</a>
+  <ul class="collapse">
+  <li><a href="#install-and-launching-r-packages" id="toc-install-and-launching-r-packages" class="nav-link" data-scroll-target="#install-and-launching-r-packages">1.1 Install and launching R packages</a></li>
+  <li><a href="#import-the-data-using-st_read" id="toc-import-the-data-using-st_read" class="nav-link" data-scroll-target="#import-the-data-using-st_read">1.2 Import the data using st_read()</a></li>
+  <li><a href="#checking-content-of-simple-feature-data-frame" id="toc-checking-content-of-simple-feature-data-frame" class="nav-link" data-scroll-target="#checking-content-of-simple-feature-data-frame">1.3 Checking content of simple feature data frame</a>
+  <ul class="collapse">
+  <li><a href="#st_geometry" id="toc-st_geometry" class="nav-link" data-scroll-target="#st_geometry">st_geometry()</a></li>
+  <li><a href="#glimpse" id="toc-glimpse" class="nav-link" data-scroll-target="#glimpse">glimpse()</a></li>
+  <li><a href="#head" id="toc-head" class="nav-link" data-scroll-target="#head">head()</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#plotting-geospatial-data" id="toc-plotting-geospatial-data" class="nav-link" data-scroll-target="#plotting-geospatial-data">2 Plotting Geospatial Data</a>
+  <ul class="collapse">
+  <li><a href="#plot" id="toc-plot" class="nav-link" data-scroll-target="#plot">2.1 plot()</a>
+  <ul class="collapse">
+  <li><a href="#plotting-the-preschool-layer-over-the-mpsz-layer---pt.1" id="toc-plotting-the-preschool-layer-over-the-mpsz-layer---pt.1" class="nav-link" data-scroll-target="#plotting-the-preschool-layer-over-the-mpsz-layer---pt.1">Plotting the preschool layer over the mpsz layer - Pt.1</a></li>
+  </ul></li>
+  <li><a href="#projection" id="toc-projection" class="nav-link" data-scroll-target="#projection">2.2 Projection</a>
+  <ul class="collapse">
+  <li><a href="#assigning-epsg-code" id="toc-assigning-epsg-code" class="nav-link" data-scroll-target="#assigning-epsg-code">2.2.1 Assigning EPSG code</a></li>
+  <li><a href="#transforming-projection" id="toc-transforming-projection" class="nav-link" data-scroll-target="#transforming-projection">2.2.2 Transforming projection</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#aspatial-data" id="toc-aspatial-data" class="nav-link" data-scroll-target="#aspatial-data">3. Aspatial data</a>
+  <ul class="collapse">
+  <li><a href="#importing-aspatial-data" id="toc-importing-aspatial-data" class="nav-link" data-scroll-target="#importing-aspatial-data">3.1 Importing aspatial data</a></li>
+  <li><a href="#creating-a-simple-data-frame-from-an-aspatial-data-frame" id="toc-creating-a-simple-data-frame-from-an-aspatial-data-frame" class="nav-link" data-scroll-target="#creating-a-simple-data-frame-from-an-aspatial-data-frame">3.2 Creating a simple data frame from an aspatial data frame</a></li>
+  </ul></li>
+  <li><a href="#geoprocessing" id="toc-geoprocessing" class="nav-link" data-scroll-target="#geoprocessing">4. Geoprocessing</a>
+  <ul class="collapse">
+  <li><a href="#use-case-1-land-acquisition-analysis" id="toc-use-case-1-land-acquisition-analysis" class="nav-link" data-scroll-target="#use-case-1-land-acquisition-analysis">4.1 Use case 1: Land acquisition analysis</a>
+  <ul class="collapse">
+  <li><a href="#scenario" id="toc-scenario" class="nav-link" data-scroll-target="#scenario">Scenario</a></li>
+  <li><a href="#solution" id="toc-solution" class="nav-link" data-scroll-target="#solution">Solution</a></li>
+  <li><a href="#creating-a-plot-to-show-the-buffer-of-a-selected-subzone" id="toc-creating-a-plot-to-show-the-buffer-of-a-selected-subzone" class="nav-link" data-scroll-target="#creating-a-plot-to-show-the-buffer-of-a-selected-subzone">Creating a plot to show the buffer of a selected subzone</a></li>
+  </ul></li>
+  <li><a href="#use-case-2-determine-the-number-of-pre-schools-by-planning-subzone" id="toc-use-case-2-determine-the-number-of-pre-schools-by-planning-subzone" class="nav-link" data-scroll-target="#use-case-2-determine-the-number-of-pre-schools-by-planning-subzone">4.2 Use case 2: Determine the number of pre-schools by planning subzone</a>
+  <ul class="collapse">
+  <li><a href="#scenario-1" id="toc-scenario-1" class="nav-link" data-scroll-target="#scenario-1">Scenario</a></li>
+  <li><a href="#solution-1" id="toc-solution-1" class="nav-link" data-scroll-target="#solution-1">Solution</a></li>
+  <li><a href="#plotting-with-ggplot2" id="toc-plotting-with-ggplot2" class="nav-link" data-scroll-target="#plotting-with-ggplot2">Plotting with ggplot2</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Geospatial Data Wrangling with R</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Erica Chan </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="getting-started" class="level1">
+<h1>1. Getting Started</h1>
+<section id="install-and-launching-r-packages" class="level2">
+<h2 class="anchored" data-anchor-id="install-and-launching-r-packages">1.1 Install and launching R packages</h2>
+<p>This code chunk uses <code>p_load()</code> to check if <strong>sf</strong> and <strong>tidyverse</strong> packages are installed</p>
+<ul>
+<li><strong>sf</strong>: imports, manages and processes geosptial data</li>
+<li><strong>tidyverse</strong>: performs data science tasks such as importing, wrangling and visualising data.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="import-the-data-using-st_read" class="level2">
+<h2 class="anchored" data-anchor-id="import-the-data-using-st_read">1.2 Import the data using st_read()</h2>
+<p>The following code chunk imports the relevant geospatial data files:</p>
+<ul>
+<li><code>mpsz</code>: Master plan 2014 Subzone Boundary form data.gov.sg (polygon feature layer)
+<ul>
+<li>As this file is a shapefile, <code>dsn</code> is used to define the data path and <code>layer</code> provides the shapefile name, without needing to use the file extension</li>
+</ul></li>
+<li><code>cyclingpath</code>: Cycling paths from LTADataMall (line feature layer)</li>
+<li><code>preschool</code>: Preschool locations from data.gov.sg (point feature layer)
+<ul>
+<li>As this file is in kml format, the full file path and kml file extension is provided</li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">=</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>,</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">layer =</span> <span class="st">"MP14_SUBZONE_WEB_PL"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `MP14_SUBZONE_WEB_PL' from data source 
+  `C:\clyerica\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex01\data\geospatial' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 323 features and 15 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33
+Projected CRS: SVY21</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cyclingpath <span class="ot">=</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>, </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                      <span class="at">layer =</span> <span class="st">"CyclingPathGazette"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `CyclingPathGazette' from data source 
+  `C:\clyerica\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex01\data\geospatial' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 4651 features and 19 fields
+Geometry type: MULTILINESTRING
+Dimension:     XY
+Bounding box:  xmin: 11721.1 ymin: 27550.13 xmax: 42809.37 ymax: 49702.59
+Projected CRS: SVY21</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>preschool <span class="ot">=</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial/PreSchoolsLocation.kml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `PRESCHOOLS_LOCATION' from data source 
+  `C:\clyerica\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex01\data\geospatial\PreSchoolsLocation.kml' 
+  using driver `KML'
+Simple feature collection with 2290 features and 2 fields
+Geometry type: POINT
+Dimension:     XYZ
+Bounding box:  xmin: 103.6878 ymin: 1.247759 xmax: 103.9897 ymax: 1.462134
+z_range:       zmin: 0 zmax: 0
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+</div>
+</section>
+<section id="checking-content-of-simple-feature-data-frame" class="level2">
+<h2 class="anchored" data-anchor-id="checking-content-of-simple-feature-data-frame">1.3 Checking content of simple feature data frame</h2>
+<section id="st_geometry" class="level3">
+<h3 class="anchored" data-anchor-id="st_geometry">st_geometry()</h3>
+<p>The code chunk below displays the geometry list-column (basic geospatial feature information)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_geometry</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Geometry set for 323 features 
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33
+Projected CRS: SVY21
+First 5 geometries:</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>MULTIPOLYGON (((31495.56 30140.01, 31980.96 296...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>MULTIPOLYGON (((29092.28 30021.89, 29119.64 300...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>MULTIPOLYGON (((29932.33 29879.12, 29947.32 298...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>MULTIPOLYGON (((27131.28 30059.73, 27088.33 297...</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>MULTIPOLYGON (((26451.03 30396.46, 26440.47 303...</code></pre>
+</div>
+</div>
+</section>
+<section id="glimpse" class="level3">
+<h3 class="anchored" data-anchor-id="glimpse">glimpse()</h3>
+<p>The code chunk below displays associated attribute information in the data frame, including the data type of each field.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 323
+Columns: 16
+$ OBJECTID   &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, …
+$ SUBZONE_NO &lt;int&gt; 1, 1, 3, 8, 3, 7, 9, 2, 13, 7, 12, 6, 1, 5, 1, 1, 3, 2, 2, …
+$ SUBZONE_N  &lt;chr&gt; "MARINA SOUTH", "PEARL'S HILL", "BOAT QUAY", "HENDERSON HIL…
+$ SUBZONE_C  &lt;chr&gt; "MSSZ01", "OTSZ01", "SRSZ03", "BMSZ08", "BMSZ03", "BMSZ07",…
+$ CA_IND     &lt;chr&gt; "Y", "Y", "Y", "N", "N", "N", "N", "Y", "N", "N", "N", "N",…
+$ PLN_AREA_N &lt;chr&gt; "MARINA SOUTH", "OUTRAM", "SINGAPORE RIVER", "BUKIT MERAH",…
+$ PLN_AREA_C &lt;chr&gt; "MS", "OT", "SR", "BM", "BM", "BM", "BM", "SR", "QT", "QT",…
+$ REGION_N   &lt;chr&gt; "CENTRAL REGION", "CENTRAL REGION", "CENTRAL REGION", "CENT…
+$ REGION_C   &lt;chr&gt; "CR", "CR", "CR", "CR", "CR", "CR", "CR", "CR", "CR", "CR",…
+$ INC_CRC    &lt;chr&gt; "5ED7EB253F99252E", "8C7149B9EB32EEFC", "C35FEFF02B13E0E5",…
+$ FMEL_UPD_D &lt;date&gt; 2014-12-05, 2014-12-05, 2014-12-05, 2014-12-05, 2014-12-05…
+$ X_ADDR     &lt;dbl&gt; 31595.84, 28679.06, 29654.96, 26782.83, 26201.96, 25358.82,…
+$ Y_ADDR     &lt;dbl&gt; 29220.19, 29782.05, 29974.66, 29933.77, 30005.70, 29991.38,…
+$ SHAPE_Leng &lt;dbl&gt; 5267.381, 3506.107, 1740.926, 3313.625, 2825.594, 4428.913,…
+$ SHAPE_Area &lt;dbl&gt; 1630379.27, 559816.25, 160807.50, 595428.89, 387429.44, 103…
+$ geometry   &lt;MULTIPOLYGON [m]&gt; MULTIPOLYGON (((31495.56 30..., MULTIPOLYGON (…</code></pre>
+</div>
+</div>
+</section>
+<section id="head" class="level3">
+<h3 class="anchored" data-anchor-id="head">head()</h3>
+<p>The code chunk below displays complete information of a feature object. <code>n</code> allows users to select the number of records displayed</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(mpsz, <span class="at">n=</span><span class="dv">3</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 3 features and 15 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 28160.23 ymin: 28369.47 xmax: 32362.39 ymax: 30247.18
+Projected CRS: SVY21
+  OBJECTID SUBZONE_NO    SUBZONE_N SUBZONE_C CA_IND      PLN_AREA_N PLN_AREA_C
+1        1          1 MARINA SOUTH    MSSZ01      Y    MARINA SOUTH         MS
+2        2          1 PEARL'S HILL    OTSZ01      Y          OUTRAM         OT
+3        3          3    BOAT QUAY    SRSZ03      Y SINGAPORE RIVER         SR
+        REGION_N REGION_C          INC_CRC FMEL_UPD_D   X_ADDR   Y_ADDR
+1 CENTRAL REGION       CR 5ED7EB253F99252E 2014-12-05 31595.84 29220.19
+2 CENTRAL REGION       CR 8C7149B9EB32EEFC 2014-12-05 28679.06 29782.05
+3 CENTRAL REGION       CR C35FEFF02B13E0E5 2014-12-05 29654.96 29974.66
+  SHAPE_Leng SHAPE_Area                       geometry
+1   5267.381  1630379.3 MULTIPOLYGON (((31495.56 30...
+2   3506.107   559816.2 MULTIPOLYGON (((29092.28 30...
+3   1740.926   160807.5 MULTIPOLYGON (((29932.33 29...</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="plotting-geospatial-data" class="level1">
+<h1>2 Plotting Geospatial Data</h1>
+<section id="plot" class="level2">
+<h2 class="anchored" data-anchor-id="plot">2.1 plot()</h2>
+<p>The default plot of an sf object is a multiplot of all attributes, up to a reasonable maximum as displayed below.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: plotting the first 9 out of 15 attributes; use max.plot = 15 to plot
+all</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>To plot only the geometry, the code chunk below can be used</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(mpsz))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The sf object can also be plotted using a specific attribute as shown below</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz[<span class="st">"PLN_AREA_N"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="plotting-the-preschool-layer-over-the-mpsz-layer---pt.1" class="level3">
+<h3 class="anchored" data-anchor-id="plotting-the-preschool-layer-over-the-mpsz-layer---pt.1">Plotting the preschool layer over the mpsz layer - Pt.1</h3>
+<p>Preschool point objects fail to plot on top of the mpsz layer in the following code chunk as each simple feature dataframe is using different coordinate systems. The next section will address this issue</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(mpsz))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(preschool), </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">add =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="projection" class="level2">
+<h2 class="anchored" data-anchor-id="projection">2.2 Projection</h2>
+<section id="assigning-epsg-code" class="level3">
+<h3 class="anchored" data-anchor-id="assigning-epsg-code">2.2.1 Assigning EPSG code</h3>
+<p>The coordinate system of the mpsz simple data frame can be viewed using <code>st_crs()</code> of the <strong>sf</strong> package as shown in the code chunk below</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coordinate Reference System:
+  User input: SVY21 
+  wkt:
+PROJCRS["SVY21",
+    BASEGEOGCRS["SVY21[WGS84]",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]],
+            ID["EPSG",6326]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["unnamed",
+        METHOD["Transverse Mercator",
+            ID["EPSG",9807]],
+        PARAMETER["Latitude of natural origin",1.36666666666667,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",103.833333333333,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["Scale factor at natural origin",1,
+            SCALEUNIT["unity",1],
+            ID["EPSG",8805]],
+        PARAMETER["False easting",28001.642,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",38744.572,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]]]</code></pre>
+</div>
+</div>
+<p>The EPSG code of the mpsz data frame is wrong as the correct code for szy21 should be 3414</p>
+<p><code>st_set_crs()</code> of the <strong>sf</strong> package is used to correct the EPSG code of the mpsz dataframe. We then check the CSR again using <code>st_crs()</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> <span class="fu">st_set_crs</span>(mpsz, <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: st_crs&lt;- : replacing crs does not reproject data; use st_transform for
+that</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coordinate Reference System:
+  User input: EPSG:3414 
+  wkt:
+PROJCRS["SVY21 / Singapore TM",
+    BASEGEOGCRS["SVY21",
+        DATUM["SVY21",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["degree",0.0174532925199433]],
+        ID["EPSG",4757]],
+    CONVERSION["Singapore Transverse Mercator",
+        METHOD["Transverse Mercator",
+            ID["EPSG",9807]],
+        PARAMETER["Latitude of natural origin",1.36666666666667,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",103.833333333333,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["Scale factor at natural origin",1,
+            SCALEUNIT["unity",1],
+            ID["EPSG",8805]],
+        PARAMETER["False easting",28001.642,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",38744.572,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["northing (N)",north,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["easting (E)",east,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Cadastre, engineering survey, topographic mapping."],
+        AREA["Singapore - onshore and offshore."],
+        BBOX[1.13,103.59,1.47,104.07]],
+    ID["EPSG",3414]]</code></pre>
+</div>
+</div>
+<p>The EPSG code is now 3414.</p>
+</section>
+<section id="transforming-projection" class="level3">
+<h3 class="anchored" data-anchor-id="transforming-projection">2.2.2 Transforming projection</h3>
+<p>The preschool simple feature data frame is in wgs84 coordinate system as seen below.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(preschool)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coordinate Reference System:
+  User input: WGS 84 
+  wkt:
+GEOGCRS["WGS 84",
+    DATUM["World Geodetic System 1984",
+        ELLIPSOID["WGS 84",6378137,298.257223563,
+            LENGTHUNIT["metre",1]]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    ID["EPSG",4326]]</code></pre>
+</div>
+</div>
+<p>To reproject preschool from one coordinate system to another coordinate system mathematically. <code>st_transform()</code> should be used instead of <code>st_set_crs()</code>. This is shown in the following code chunk</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>preschool <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(preschool, </span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>                              <span class="at">crs =</span> <span class="dv">3414</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(mpsz)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coordinate Reference System:
+  User input: EPSG:3414 
+  wkt:
+PROJCRS["SVY21 / Singapore TM",
+    BASEGEOGCRS["SVY21",
+        DATUM["SVY21",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["degree",0.0174532925199433]],
+        ID["EPSG",4757]],
+    CONVERSION["Singapore Transverse Mercator",
+        METHOD["Transverse Mercator",
+            ID["EPSG",9807]],
+        PARAMETER["Latitude of natural origin",1.36666666666667,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",103.833333333333,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["Scale factor at natural origin",1,
+            SCALEUNIT["unity",1],
+            ID["EPSG",8805]],
+        PARAMETER["False easting",28001.642,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",38744.572,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["northing (N)",north,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["easting (E)",east,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Cadastre, engineering survey, topographic mapping."],
+        AREA["Singapore - onshore and offshore."],
+        BBOX[1.13,103.59,1.47,104.07]],
+    ID["EPSG",3414]]</code></pre>
+</div>
+</div>
+<section id="plotting-the-preschool-layer-over-the-mpsz-layer---pt.2" class="level4">
+<h4 class="anchored" data-anchor-id="plotting-the-preschool-layer-over-the-mpsz-layer---pt.2">Plotting the preschool layer over the mpsz layer - Pt.2</h4>
+<p>With the corrected coordinate systems for both layers, the preschool point layer can now be plotted on top of the mpsz layer.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(mpsz))</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(preschool), <span class="at">add =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+</section>
+<section id="aspatial-data" class="level1">
+<h1>3. Aspatial data</h1>
+<section id="importing-aspatial-data" class="level2">
+<h2 class="anchored" data-anchor-id="importing-aspatial-data">3.1 Importing aspatial data</h2>
+<p>This section will use the listings.csv data from AirBnb. This is aspatial data, as it is not geospatial data but it includes two data fields which capture the x and y coordinates of the data points</p>
+<p><code>read_csv()</code> of <strong>readr</strong> package will be used to import the data into a tibble data frame</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>listings <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/aspatial/listings.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 3659 Columns: 79
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr  (26): listing_url, source, name, description, neighborhood_overview, pi...
+dbl  (42): id, scrape_id, host_id, host_listings_count, host_total_listings_...
+lgl   (6): host_is_superhost, host_has_profile_pic, host_identity_verified, ...
+date  (5): last_scraped, host_since, calendar_last_scraped, first_review, la...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<p><code>list()</code> of Base R will be used to examine the data file to confirm it was imported correctly</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">list</span>(listings)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+# A tibble: 3,659 × 79
+       id listing_url            scrape_id last_scraped source name  description
+    &lt;dbl&gt; &lt;chr&gt;                      &lt;dbl&gt; &lt;date&gt;       &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;      
+ 1  71609 https://www.airbnb.co…   2.03e13 2025-06-26   city … Ensu… For 3 room…
+ 2  71896 https://www.airbnb.co…   2.03e13 2025-06-27   previ… B&amp;B … &lt;NA&gt;       
+ 3  71903 https://www.airbnb.co…   2.03e13 2025-06-27   city … Room… Like your …
+ 4 275343 https://www.airbnb.co…   2.03e13 2025-06-26   previ… 10mi… **IMPORTAN…
+ 5 275344 https://www.airbnb.co…   2.03e13 2025-06-27   previ… 15 m… Lovely hom…
+ 6 294281 https://www.airbnb.co…   2.03e13 2025-06-30   city … 5 mi… I have 3 b…
+ 7 324945 https://www.airbnb.co…   2.03e13 2025-06-27   previ… Comf… **IMPORTAN…
+ 8 330095 https://www.airbnb.co…   2.03e13 2025-06-27   previ… Rela… **IMPORTAN…
+ 9 344803 https://www.airbnb.co…   2.03e13 2025-06-25   city … Budg… Direct bus…
+10 369141 https://www.airbnb.co…   2.03e13 2025-06-26   city … 5min… A room in …
+# ℹ 3,649 more rows
+# ℹ 72 more variables: neighborhood_overview &lt;chr&gt;, picture_url &lt;chr&gt;,
+#   host_id &lt;dbl&gt;, host_url &lt;chr&gt;, host_name &lt;chr&gt;, host_since &lt;date&gt;,
+#   host_location &lt;chr&gt;, host_about &lt;chr&gt;, host_response_time &lt;chr&gt;,
+#   host_response_rate &lt;chr&gt;, host_acceptance_rate &lt;chr&gt;,
+#   host_is_superhost &lt;lgl&gt;, host_thumbnail_url &lt;chr&gt;, host_picture_url &lt;chr&gt;,
+#   host_neighbourhood &lt;chr&gt;, host_listings_count &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<p>The latitude and longitude fields will be used as the x and y coordinates for the next phase. They are in decimal degree format. We will assume that the data is in wgs84 Geographic Coordinate System.</p>
+</section>
+<section id="creating-a-simple-data-frame-from-an-aspatial-data-frame" class="level2">
+<h2 class="anchored" data-anchor-id="creating-a-simple-data-frame-from-an-aspatial-data-frame">3.2 Creating a simple data frame from an aspatial data frame</h2>
+<p>The code chunk below converts listing data frame into a simple feature data frame by using <code>st_as_sf()</code> of <strong>sf</strong> packages</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>listings_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(listings, </span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>),</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">crs=</span><span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<ul>
+<li><code>coords</code>: provide the column name of the x-coordinates first then followed by the column name of the y-coordinates.</li>
+<li><code>crs</code>: provide the coordinates system in epsg format.</li>
+<li><code>%&gt;%</code> is used to nest <code>st_transform()</code> to transform the newly created simple feature data frame into svy21 projected coordinates system.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(listings_sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 3,659
+Columns: 78
+$ id                                           &lt;dbl&gt; 71609, 71896, 71903, 2753…
+$ listing_url                                  &lt;chr&gt; "https://www.airbnb.com/r…
+$ scrape_id                                    &lt;dbl&gt; 2.025063e+13, 2.025063e+1…
+$ last_scraped                                 &lt;date&gt; 2025-06-26, 2025-06-27, …
+$ source                                       &lt;chr&gt; "city scrape", "previous …
+$ name                                         &lt;chr&gt; "Ensuite Room (Room 1 &amp; 2…
+$ description                                  &lt;chr&gt; "For 3 rooms.Book room 1&amp;…
+$ neighborhood_overview                        &lt;chr&gt; NA, NA, "Quiet and view o…
+$ picture_url                                  &lt;chr&gt; "https://a0.muscache.com/…
+$ host_id                                      &lt;dbl&gt; 367042, 367042, 367042, 1…
+$ host_url                                     &lt;chr&gt; "https://www.airbnb.com/u…
+$ host_name                                    &lt;chr&gt; "Belinda", "Belinda", "Be…
+$ host_since                                   &lt;date&gt; 2011-01-29, 2011-01-29, …
+$ host_location                                &lt;chr&gt; "Singapore", "Singapore",…
+$ host_about                                   &lt;chr&gt; "Hi My name is Belinda -H…
+$ host_response_time                           &lt;chr&gt; "within an hour", "within…
+$ host_response_rate                           &lt;chr&gt; "100%", "100%", "100%", "…
+$ host_acceptance_rate                         &lt;chr&gt; "100%", "100%", "100%", "…
+$ host_is_superhost                            &lt;lgl&gt; FALSE, FALSE, FALSE, FALS…
+$ host_thumbnail_url                           &lt;chr&gt; "https://a0.muscache.com/…
+$ host_picture_url                             &lt;chr&gt; "https://a0.muscache.com/…
+$ host_neighbourhood                           &lt;chr&gt; "Tampines", "Tampines", "…
+$ host_listings_count                          &lt;dbl&gt; 5, 5, 5, 59, 59, 7, 59, 5…
+$ host_total_listings_count                    &lt;dbl&gt; 10, 10, 10, 88, 88, 8, 88…
+$ host_verifications                           &lt;chr&gt; "['email', 'phone']", "['…
+$ host_has_profile_pic                         &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ host_identity_verified                       &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ neighbourhood                                &lt;chr&gt; NA, NA, "Singapore, Singa…
+$ neighbourhood_cleansed                       &lt;chr&gt; "Tampines", "Tampines", "…
+$ neighbourhood_group_cleansed                 &lt;chr&gt; "East Region", "East Regi…
+$ property_type                                &lt;chr&gt; "Private room in villa", …
+$ room_type                                    &lt;chr&gt; "Private room", "Private …
+$ accommodates                                 &lt;dbl&gt; 2, 1, 2, 1, 1, 2, 1, 1, 1…
+$ bathrooms                                    &lt;dbl&gt; 1.0, NA, 0.5, NA, NA, 1.0…
+$ bathrooms_text                               &lt;chr&gt; "1 private bath", "Shared…
+$ bedrooms                                     &lt;dbl&gt; 2, NA, 1, NA, NA, 2, NA, …
+$ beds                                         &lt;dbl&gt; 3, NA, 2, NA, NA, 1, NA, …
+$ amenities                                    &lt;chr&gt; "[\"Shampoo\", \"Fire pit…
+$ price                                        &lt;chr&gt; "$143.00", NA, "$76.00", …
+$ minimum_nights                               &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_nights                               &lt;dbl&gt; 365, 365, 365, 999, 999, …
+$ minimum_minimum_nights                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_minimum_nights                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ minimum_maximum_nights                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ maximum_maximum_nights                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ minimum_nights_avg_ntm                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_nights_avg_ntm                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ calendar_updated                             &lt;lgl&gt; NA, NA, NA, NA, NA, NA, N…
+$ has_availability                             &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ availability_30                              &lt;dbl&gt; 30, 20, 30, 0, 0, 30, 0, …
+$ availability_60                              &lt;dbl&gt; 60, 49, 60, 24, 25, 60, 2…
+$ availability_90                              &lt;dbl&gt; 90, 79, 90, 54, 55, 90, 5…
+$ availability_365                             &lt;dbl&gt; 90, 79, 90, 153, 153, 365…
+$ calendar_last_scraped                        &lt;date&gt; 2025-06-26, 2025-06-27, …
+$ number_of_reviews                            &lt;dbl&gt; 19, 24, 46, 20, 16, 131, …
+$ number_of_reviews_ltm                        &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ number_of_reviews_l30d                       &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ availability_eoy                             &lt;dbl&gt; 90, 79, 90, 153, 153, 185…
+$ number_of_reviews_ly                         &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ estimated_occupancy_l365d                    &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ estimated_revenue_l365d                      &lt;dbl&gt; 0, NA, 0, NA, NA, 0, NA, …
+$ first_review                                 &lt;date&gt; 2011-12-19, 2011-07-30, …
+$ last_review                                  &lt;date&gt; 2020-01-17, 2019-10-13, …
+$ review_scores_rating                         &lt;dbl&gt; 4.44, 4.16, 4.41, 4.40, 4…
+$ review_scores_accuracy                       &lt;dbl&gt; 4.37, 4.22, 4.39, 4.16, 4…
+$ review_scores_cleanliness                    &lt;dbl&gt; 4.00, 4.09, 4.52, 4.26, 4…
+$ review_scores_checkin                        &lt;dbl&gt; 4.63, 4.43, 4.63, 4.47, 4…
+$ review_scores_communication                  &lt;dbl&gt; 4.78, 4.43, 4.64, 4.42, 4…
+$ review_scores_location                       &lt;dbl&gt; 4.26, 4.17, 4.50, 4.53, 4…
+$ review_scores_value                          &lt;dbl&gt; 4.32, 4.04, 4.36, 4.63, 4…
+$ license                                      &lt;chr&gt; NA, NA, NA, "S0399", "S03…
+$ instant_bookable                             &lt;lgl&gt; FALSE, FALSE, FALSE, TRUE…
+$ calculated_host_listings_count               &lt;dbl&gt; 5, 5, 5, 58, 58, 7, 58, 5…
+$ calculated_host_listings_count_entire_homes  &lt;dbl&gt; 0, 0, 0, 0, 0, 1, 0, 0, 0…
+$ calculated_host_listings_count_private_rooms &lt;dbl&gt; 5, 5, 5, 58, 58, 6, 58, 5…
+$ calculated_host_listings_count_shared_rooms  &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ reviews_per_month                            &lt;dbl&gt; 0.12, 0.14, 0.27, 0.13, 0…
+$ geometry                                     &lt;POINT [m]&gt; POINT (41972.5 3639…</code></pre>
+</div>
+</div>
+<p>To plot the listing_sf layer on top of the mpsz layer, we will transform the coordinate system for the listing_sf layer to szy21, then plot the layers.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>listings_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(listings, </span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>                        <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"longitude"</span>, <span class="st">"latitude"</span>),</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>                        <span class="at">crs=</span><span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(listings_sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 3,659
+Columns: 78
+$ id                                           &lt;dbl&gt; 71609, 71896, 71903, 2753…
+$ listing_url                                  &lt;chr&gt; "https://www.airbnb.com/r…
+$ scrape_id                                    &lt;dbl&gt; 2.025063e+13, 2.025063e+1…
+$ last_scraped                                 &lt;date&gt; 2025-06-26, 2025-06-27, …
+$ source                                       &lt;chr&gt; "city scrape", "previous …
+$ name                                         &lt;chr&gt; "Ensuite Room (Room 1 &amp; 2…
+$ description                                  &lt;chr&gt; "For 3 rooms.Book room 1&amp;…
+$ neighborhood_overview                        &lt;chr&gt; NA, NA, "Quiet and view o…
+$ picture_url                                  &lt;chr&gt; "https://a0.muscache.com/…
+$ host_id                                      &lt;dbl&gt; 367042, 367042, 367042, 1…
+$ host_url                                     &lt;chr&gt; "https://www.airbnb.com/u…
+$ host_name                                    &lt;chr&gt; "Belinda", "Belinda", "Be…
+$ host_since                                   &lt;date&gt; 2011-01-29, 2011-01-29, …
+$ host_location                                &lt;chr&gt; "Singapore", "Singapore",…
+$ host_about                                   &lt;chr&gt; "Hi My name is Belinda -H…
+$ host_response_time                           &lt;chr&gt; "within an hour", "within…
+$ host_response_rate                           &lt;chr&gt; "100%", "100%", "100%", "…
+$ host_acceptance_rate                         &lt;chr&gt; "100%", "100%", "100%", "…
+$ host_is_superhost                            &lt;lgl&gt; FALSE, FALSE, FALSE, FALS…
+$ host_thumbnail_url                           &lt;chr&gt; "https://a0.muscache.com/…
+$ host_picture_url                             &lt;chr&gt; "https://a0.muscache.com/…
+$ host_neighbourhood                           &lt;chr&gt; "Tampines", "Tampines", "…
+$ host_listings_count                          &lt;dbl&gt; 5, 5, 5, 59, 59, 7, 59, 5…
+$ host_total_listings_count                    &lt;dbl&gt; 10, 10, 10, 88, 88, 8, 88…
+$ host_verifications                           &lt;chr&gt; "['email', 'phone']", "['…
+$ host_has_profile_pic                         &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ host_identity_verified                       &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ neighbourhood                                &lt;chr&gt; NA, NA, "Singapore, Singa…
+$ neighbourhood_cleansed                       &lt;chr&gt; "Tampines", "Tampines", "…
+$ neighbourhood_group_cleansed                 &lt;chr&gt; "East Region", "East Regi…
+$ property_type                                &lt;chr&gt; "Private room in villa", …
+$ room_type                                    &lt;chr&gt; "Private room", "Private …
+$ accommodates                                 &lt;dbl&gt; 2, 1, 2, 1, 1, 2, 1, 1, 1…
+$ bathrooms                                    &lt;dbl&gt; 1.0, NA, 0.5, NA, NA, 1.0…
+$ bathrooms_text                               &lt;chr&gt; "1 private bath", "Shared…
+$ bedrooms                                     &lt;dbl&gt; 2, NA, 1, NA, NA, 2, NA, …
+$ beds                                         &lt;dbl&gt; 3, NA, 2, NA, NA, 1, NA, …
+$ amenities                                    &lt;chr&gt; "[\"Shampoo\", \"Fire pit…
+$ price                                        &lt;chr&gt; "$143.00", NA, "$76.00", …
+$ minimum_nights                               &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_nights                               &lt;dbl&gt; 365, 365, 365, 999, 999, …
+$ minimum_minimum_nights                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_minimum_nights                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ minimum_maximum_nights                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ maximum_maximum_nights                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ minimum_nights_avg_ntm                       &lt;dbl&gt; 92, 92, 92, 180, 180, 92,…
+$ maximum_nights_avg_ntm                       &lt;dbl&gt; 1125, 1125, 1125, 1125, 1…
+$ calendar_updated                             &lt;lgl&gt; NA, NA, NA, NA, NA, NA, N…
+$ has_availability                             &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, T…
+$ availability_30                              &lt;dbl&gt; 30, 20, 30, 0, 0, 30, 0, …
+$ availability_60                              &lt;dbl&gt; 60, 49, 60, 24, 25, 60, 2…
+$ availability_90                              &lt;dbl&gt; 90, 79, 90, 54, 55, 90, 5…
+$ availability_365                             &lt;dbl&gt; 90, 79, 90, 153, 153, 365…
+$ calendar_last_scraped                        &lt;date&gt; 2025-06-26, 2025-06-27, …
+$ number_of_reviews                            &lt;dbl&gt; 19, 24, 46, 20, 16, 131, …
+$ number_of_reviews_ltm                        &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ number_of_reviews_l30d                       &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ availability_eoy                             &lt;dbl&gt; 90, 79, 90, 153, 153, 185…
+$ number_of_reviews_ly                         &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ estimated_occupancy_l365d                    &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ estimated_revenue_l365d                      &lt;dbl&gt; 0, NA, 0, NA, NA, 0, NA, …
+$ first_review                                 &lt;date&gt; 2011-12-19, 2011-07-30, …
+$ last_review                                  &lt;date&gt; 2020-01-17, 2019-10-13, …
+$ review_scores_rating                         &lt;dbl&gt; 4.44, 4.16, 4.41, 4.40, 4…
+$ review_scores_accuracy                       &lt;dbl&gt; 4.37, 4.22, 4.39, 4.16, 4…
+$ review_scores_cleanliness                    &lt;dbl&gt; 4.00, 4.09, 4.52, 4.26, 4…
+$ review_scores_checkin                        &lt;dbl&gt; 4.63, 4.43, 4.63, 4.47, 4…
+$ review_scores_communication                  &lt;dbl&gt; 4.78, 4.43, 4.64, 4.42, 4…
+$ review_scores_location                       &lt;dbl&gt; 4.26, 4.17, 4.50, 4.53, 4…
+$ review_scores_value                          &lt;dbl&gt; 4.32, 4.04, 4.36, 4.63, 4…
+$ license                                      &lt;chr&gt; NA, NA, NA, "S0399", "S03…
+$ instant_bookable                             &lt;lgl&gt; FALSE, FALSE, FALSE, TRUE…
+$ calculated_host_listings_count               &lt;dbl&gt; 5, 5, 5, 58, 58, 7, 58, 5…
+$ calculated_host_listings_count_entire_homes  &lt;dbl&gt; 0, 0, 0, 0, 0, 1, 0, 0, 0…
+$ calculated_host_listings_count_private_rooms &lt;dbl&gt; 5, 5, 5, 58, 58, 6, 58, 5…
+$ calculated_host_listings_count_shared_rooms  &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0…
+$ reviews_per_month                            &lt;dbl&gt; 0.12, 0.14, 0.27, 0.13, 0…
+$ geometry                                     &lt;POINT [m]&gt; POINT (41972.5 3639…</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(mpsz))</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(listings_sf), <span class="at">add =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="geoprocessing" class="level1">
+<h1>4. Geoprocessing</h1>
+<p>This section will use the <strong>sf</strong> package answer GIS questions</p>
+<section id="use-case-1-land-acquisition-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="use-case-1-land-acquisition-analysis">4.1 Use case 1: Land acquisition analysis</h2>
+<section id="scenario" class="level3">
+<h3 class="anchored" data-anchor-id="scenario">Scenario</h3>
+<p>The authority is planning to upgrade the exiting cycling path. To do so, they need to acquire 5 metres of reserved land on the both sides of the existing cycling path. You are tasked to determine the extend of the land need to be acquired and their total area.</p>
+</section>
+<section id="solution" class="level3">
+<h3 class="anchored" data-anchor-id="solution">Solution</h3>
+<p>First, <code>st_buffer()</code> of <strong>sf</strong> package is used to compute the 5-meter buffers around the paths. Next, the area is calculated and <code>sum()</code> of Base R is used to derive the total land needed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>buffer_cycling <span class="ot">&lt;-</span> <span class="fu">st_buffer</span>(</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  cyclingpath, <span class="at">dist=</span><span class="dv">5</span>, <span class="at">nQuadSegs =</span> <span class="dv">30</span>)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>buffer_cycling<span class="sc">$</span>AREA <span class="ot">&lt;-</span> <span class="fu">st_area</span>(buffer_cycling)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>buffer_cycling <span class="ot">&lt;-</span> buffer_cycling <span class="sc">%&gt;%</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">AREA =</span> <span class="fu">st_area</span>(geometry))</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(buffer_cycling<span class="sc">$</span>AREA)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>3561648 [m^2]</code></pre>
+</div>
+</div>
+</section>
+<section id="creating-a-plot-to-show-the-buffer-of-a-selected-subzone" class="level3">
+<h3 class="anchored" data-anchor-id="creating-a-plot-to-show-the-buffer-of-a-selected-subzone">Creating a plot to show the buffer of a selected subzone</h3>
+<p>First <code>filter()</code> of <strong>splyr</strong> package can be used to extract the polygon feture of Tampines west using the code chunk below.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>mpsz_selected <span class="ot">&lt;-</span> mpsz <span class="sc">%&gt;%</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(SUBZONE_N <span class="sc">==</span> <span class="st">"TAMPINES WEST"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The EPSG code for buffer_cycling needs correction to 3414 instead of 9001</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(buffer_cycling)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coordinate Reference System:
+  User input: SVY21 
+  wkt:
+PROJCRS["SVY21",
+    BASEGEOGCRS["WGS 84",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]],
+            ID["EPSG",6326]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["unnamed",
+        METHOD["Transverse Mercator",
+            ID["EPSG",9807]],
+        PARAMETER["Latitude of natural origin",1.36666666666667,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",103.833333333333,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["Scale factor at natural origin",1,
+            SCALEUNIT["unity",1],
+            ID["EPSG",8805]],
+        PARAMETER["False easting",28001.642,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",38744.572,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]]]</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>buffer_cycling <span class="ot">&lt;-</span> <span class="fu">st_set_crs</span>(buffer_cycling, <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: st_crs&lt;- : replacing crs does not reproject data; use st_transform for
+that</code></pre>
+</div>
+</div>
+<p>Next, <code>st_intersection()</code> of <strong>sf</strong> package will be used to clip cycling buffers within Tampines West planning subzone.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>buffer_cycling_selected <span class="ot">&lt;-</span> <span class="fu">st_intersection</span>(</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  buffer_cycling, mpsz_selected)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: attribute variables are assumed to be spatially constant throughout
+all geometries</code></pre>
+</div>
+</div>
+<p>Lastly <code>plot()</code> of R Graphic will be used to create the plot below</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">st_geometry</span>(buffer_cycling_selected))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="use-case-2-determine-the-number-of-pre-schools-by-planning-subzone" class="level2">
+<h2 class="anchored" data-anchor-id="use-case-2-determine-the-number-of-pre-schools-by-planning-subzone">4.2 Use case 2: Determine the number of pre-schools by planning subzone</h2>
+<section id="scenario-1" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-1">Scenario</h3>
+<p>The authority requires a count of pre-schools for each planning subzone to support forward planning. Using R and the sf package, perform the necessary geoprocessing to compute these counts and present the results clearly.</p>
+</section>
+<section id="solution-1" class="level3">
+<h3 class="anchored" data-anchor-id="solution-1">Solution</h3>
+<p>The code chunk below performs two operations at one go. Firstly, identify pre-schools located inside each Planning Subzone by using <code>st_intersects()</code>. Next, <code>length()</code> of Base R is used to calculate numbers of pre-schools that fall inside each planning subzone.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>mpsz<span class="sc">$</span><span class="st">`</span><span class="at">PreSch Count</span><span class="st">`</span><span class="ot">&lt;-</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(mpsz, preschool))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The summary statistics of Presch Count can be viewed using <code>summary()</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mpsz<span class="sc">$</span><span class="st">`</span><span class="at">PreSch Count</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00    0.00    4.00    7.09   10.00   72.00 </code></pre>
+</div>
+</div>
+<p>To list the planning subzone with the most number of pre-school, the <code>top_n()</code> of <strong>dplyr</strong> package is used as shown in the code chunk below.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">top_n</span>(mpsz, <span class="dv">1</span>, <span class="st">`</span><span class="at">PreSch Count</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 1 feature and 16 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 39655.33 ymin: 35966 xmax: 42940.57 ymax: 38622.37
+Projected CRS: SVY21 / Singapore TM
+  OBJECTID SUBZONE_NO     SUBZONE_N SUBZONE_C CA_IND PLN_AREA_N PLN_AREA_C
+1      189          2 TAMPINES EAST    TMSZ02      N   TAMPINES         TM
+     REGION_N REGION_C          INC_CRC FMEL_UPD_D   X_ADDR   Y_ADDR SHAPE_Leng
+1 EAST REGION       ER 21658EAAF84F4D8D 2014-12-05 41122.55 37392.39   10180.62
+  SHAPE_Area                       geometry PreSch Count
+1    4339824 MULTIPOLYGON (((42196.76 38...           72</code></pre>
+</div>
+</div>
+<p><code>st_area()</code> of <strong>sf</strong> package is used to derive the area of each planning subzone</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>mpsz<span class="sc">$</span>Area <span class="ot">&lt;-</span> mpsz <span class="sc">%&gt;%</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_area</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><code>mutate()</code> of <strong>dplyr</strong> package is then used to compute density</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>mpsz <span class="ot">&lt;-</span> mpsz <span class="sc">%&gt;%</span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">PreSch Density</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">PreSch Count</span><span class="st">`</span><span class="sc">/</span>Area <span class="sc">*</span> <span class="dv">1000000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="plotting-with-ggplot2" class="level3">
+<h3 class="anchored" data-anchor-id="plotting-with-ggplot2">Plotting with ggplot2</h3>
+<p>As <code>hist()</code> of R Graphics has limited customisability, <strong>ggplot2</strong> is useful for tailoring graphics to meet publication quality</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>mpsz, </span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x=</span> <span class="fu">as.numeric</span>(<span class="st">`</span><span class="at">PreSch Density</span><span class="st">`</span>)))<span class="sc">+</span></span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins=</span><span class="dv">20</span>, </span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">color=</span><span class="st">"black"</span>, </span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">fill=</span><span class="st">"light blue"</span>) <span class="sc">+</span></span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Are pre-schools evenly distributed in Singapore?"</span>,</span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle=</span> <span class="st">"There are many planning subzones with a single pre-school, on the other hand, </span><span class="sc">\n</span><span class="st">there are seven planning subzones with at least 30 or more pre-schools"</span>,</span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Pre-school density (per km sq)"</span>,</span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Frequency"</span>) <span class="sc">+</span></span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">panel.grid.major =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The following code chunk plots a scatterplot showing the relaitonship between Pre-school density and Pre-school Count using ggplot2</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>mpsz, </span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">y =</span> <span class="st">`</span><span class="at">PreSch Count</span><span class="st">`</span>, </span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">x=</span> <span class="fu">as.numeric</span>(<span class="st">`</span><span class="at">PreSch Density</span><span class="st">`</span>)))<span class="sc">+</span></span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">color=</span><span class="st">"black"</span>, </span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">fill=</span><span class="st">"light blue"</span>) <span class="sc">+</span></span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlim</span>(<span class="dv">0</span>, <span class="dv">40</span>) <span class="sc">+</span></span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="dv">0</span>, <span class="dv">40</span>) <span class="sc">+</span></span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">""</span>,</span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Pre-school density (per km sq)"</span>,</span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Pre-school count"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 2 rows containing missing values or values outside the scale range
+(`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands-on_Ex01a_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+
+
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
