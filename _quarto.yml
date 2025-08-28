@@ -9,7 +9,7 @@ website:
         menu: 
           - text: "Geospatial Data Wrangling with R" 
             href: "Hands-on_Ex/Hands-on_Ex01a.html"
-          - text: "Chloropleth Mapping with R" 
+          - text: "Choropleth Mapping with R" 
             href: "Hands-on_Ex/Hands-on_Ex01b.html"
     right:
       - href: index.qmd
