@@ -41,7 +41,11 @@ pacman::p_load(sf, terra, spatstat,
 
 # 4 Importing and Wrangling the Geospatial Data sets
 
-The following code chunk imports Master Plan 2019 Subzone (No Sea) dataset into R. - st_zm() removes Z (elevation) and M (measure) dimensions from geospatial geometries. - st_transform(crs=3414) transforms the projections to svy21
+The following code chunk imports Master Plan 2019 Subzone (No Sea) dataset into R.
+
+-    st_zm() removes Z (elevation) and M (measure) dimensions from geospatial geometries.
+
+-   st_transform(crs=3414) transforms the projections to svy21
 
 ```{r}
 mpsz_sf <- st_read("data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>% 
