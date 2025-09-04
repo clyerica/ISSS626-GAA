@@ -11,6 +11,9 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01a.html"
           - text: "Choropleth Mapping with R" 
             href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01b.html"
+          - text: "1st Order Spatial Points Patterns Analysis Methods" 
+            href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02a.html"
+          - text: "2nd Order Spatial Points Patterns Analysis Methods" 
     right:
       - href: index.qmd
         text: Home
