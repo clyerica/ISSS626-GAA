@@ -137,6 +137,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01b.html">
  <span class="dropdown-text">Choropleth Mapping with R</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02a.html">
+ <span class="dropdown-text">1st Order Spatial Points Patterns Analysis Methods</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02b.html">
+ <span class="dropdown-text">2nd Order Spatial Points Patterns Analysis Methods</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -144,10 +152,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li class="nav-item">
     <a class="nav-link" href="../../index.html"> 
 <span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../about.html"> 
-<span class="menu-text">About</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -291,7 +295,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_zm</span>(<span class="at">drop =</span> <span class="cn">TRUE</span>, <span class="at">what =</span> <span class="st">"ZM"</span>) <span class="sc">%&gt;%</span> <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `URA_MP19_SUBZONE_NO_SEA_PL' from data source 
-  `C:\clyerica\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex02\data\MasterPlan2019SubzoneBoundaryNoSeaKML.kml' 
+  `C:\clyerica\ISSS626\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex02\data\MasterPlan2019SubzoneBoundaryNoSeaKML.kml' 
   using driver `KML'
 Simple feature collection with 332 features and 2 fields
 Geometry type: MULTIPOLYGON
@@ -358,7 +362,7 @@ Geodetic CRS:  WGS 84</code></pre>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `ChildCareServices' from data source 
-  `C:\clyerica\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex02\data\ChildCareServices.geojson' 
+  `C:\clyerica\ISSS626\ISSS626-GAA\Hands-on_Ex\Hands-on_Ex02\data\ChildCareServices.geojson' 
   using driver `GeoJSON'
 Simple feature collection with 1925 features and 2 fields
 Geometry type: POINT
