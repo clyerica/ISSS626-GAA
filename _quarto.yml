@@ -15,6 +15,8 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02a.html"
           - text: "2nd Order Spatial Points Patterns Analysis Methods"
             href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02b.html"
+          - text: "Spatio-Temporal Point Patterns Analysis"
+            href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html"
 
     right:
       - href: index.qmd

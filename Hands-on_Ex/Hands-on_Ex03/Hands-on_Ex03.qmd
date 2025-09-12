@@ -1,6 +1,5 @@
 ---
-title: "Spatio-Temporal Point Patterns Analysis
-"
+title: "Spatio-Temporal Point Patterns Analysis"
 format: html
 ---
 
