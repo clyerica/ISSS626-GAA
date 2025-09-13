@@ -1,0 +1,18 @@
+---
+title: "Takehome_Ex01"
+format: html
+author: "Erica Chan"
+date: "September 12, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(sf,tmap, tidyverse, httr,
+               ggthemes, plotly, terra, spatstat, rvest)
+```
+

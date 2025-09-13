@@ -113,7 +113,10 @@ childcare_sf <- st_read("data/ChildCareServices.geojson") %>%
 As **spatstat** requires the point event data in **ppp** object form., the code chunk below uses `as.ppp()` of **spatstat** package to convert `childcare_sf` to **ppp** format.
 
 ```{r}
-childcare_ppp <- as.ppp(childcare_sf)
+childcare_ppp <- as.ppp(childcare_sf) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
 ```
 
 Next, we extract the relevant event points from the selected target planning areas.
@@ -379,7 +382,7 @@ The null hypothesis will be rejected if p-value if smaller than alpha value of 0
 The code chunk below is used to perform the hypothesis testing.
 
 ```{r}
-L_tm.csr <- envelope(childcare_ck_ppp, Lest, nsim = 99, rank = 1, glocal=TRUE)
+L_tm.csr <- envelope(childcare_tm_ppp, Lest, nsim = 99, rank = 1, glocal=TRUE)
 ```
 
 ```{r}
