@@ -12,16 +12,15 @@ execute:
 ---
 
 Load in R packages
+
 ```{r}
 pacman::p_load(sf,tmap, tidyverse, httr,
                ggthemes, plotly, terra, spatstat, rvest)
 ```
 
-::: callout-note
--   **httr** is an R package designed to provide a wrapper for the curl pakcae, customised to the demands of modern web APIs.
+-   **httr** is an R package designed to provide a wrapper for the curl package, customised to the demands of modern web APIs.
 -   **dplyr** is a grammar of data manipulation, providing a consistent set of verbs that help to solve the most common data manipulation challenges.
--   **lubridate** :::
-:::
+-   **lubridate**
 
 save the data into acra_data
 
@@ -40,6 +39,7 @@ save the data as rds to avoid having to redo all data preparation steps again la
 write_rds(acra_data,
           "data/rds/acra_data.rds")
 ```
+
 tidying ACRA data
 
 ```{r}
@@ -85,7 +85,6 @@ if (json$found != 0) {
 }
 ```
 
-
 ```{r}
 biz_56111=biz56111%>%
   left_join(found,
@@ -95,5 +94,3 @@ biz_56111_sf <- st_as_sf(biz_56111,
                          coords=c("X","Y"),
                          crs=3414)
 ```
-
-

@@ -1,0 +1,215 @@
+---
+title: "Takehome_Ex01"
+format: html
+author: "Erica Chan"
+date: "September 12, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+# Take-home Exercise 1: Geospatial Analytics for Public Good
+
+## 1. Introduction
+
+### Overview
+The locations of businesses and firms are central to urban development, influencing economic growth, job creation, and the availability of resources and services for residents and other businesses. Strategic locations provide competitive advantages, access to talent and infrastructure, and impact brand image and market positioning, while also shaping the city’s overall character and functionality by fostering specialized districts and facilitating efficient supply chains and employee commutes.
+
+In this exercise, we will apply spatial and spatio temporal point pattern analysis methods to 
+- To identify the “where” and “when” of new business entities, revealing clusters, patterns, and trends that are crucial for informed urban planning, resource allocation, and economic development.
+- To identify complex interaction patterns and emergent phenomena in the distribution of new businesses beyond simple proximity or density, such as clustering of related businesses, the influence of past trends on future locations, and the overall structural development of commercial areas, which are crucial for scientific urban planning and policy-making.
+
+## Installing and Loading R Packages
+
+The following R packages are used for this project
+
+| Package | Use |
+|----------------|:--------------------------------------------------------------|
+| sf | Provides framework for spatial data analysis by working with simple features to represent spatial vector data (points, lines, polygons) and their associated attributes |
+| tidyverse | Contains several core packages such as ggplot2 for data visualisation, dplyr for data manipulation, tidyr for tidying data and readr for data import from file formats like CSV |
+| tmap | provides functions for plotting cartographic quality thematic maps |
+| httr | allows interacting with web APIs and making HTTP requests. It provides a set of tools to send requests (GET, POST, PUT, DELETE, etc.) and process the responses received from web servers |
+| terra | The terra package is a modern spatial data analysis package designed to replace the raster package. It offers improved speed and efficiency when working with both raster and vector spatial data, particularly with large datasets. terra provides functionalities for creating, reading, manipulating, and writing raster and vector data, and it’s built on top of GDAL and PROJ libraries for enhanced performance. |
+| spatstat | to perform spatial points patterns analysis |
+| sparr | provides functions to estimate kernel-smoothed spatial and spatio-temporal densities and relative risk functions, and perform subsequent inference |
+
+```{r}
+pacman::p_load(sf, terra, spatstat, 
+               tmap, rvest, tidyverse,
+               httr)
+```
+
+# The Data
+
+## Preparing the Geospatial data
+
+The following code chunk imports Master Plan 2019 Subzone (No Sea) dataset into R.
+
+-   st_zm() removes Z (elevation) and M (measure) dimensions from geospatial geometries.
+
+-   st_transform(crs=3414) transforms the projections to svy21
+
+```{r} 
+mpsz_sf <- st_read("data/geospatial_data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>%  
+  st_zm(drop = TRUE, what = "ZM") %>% 
+  st_transform(crs = 3414)
+```
+
+Next, the following code chunk builds the function extract_kml_field to extract REGION_N, PLN_AREA_N, SUBZONE_N, SUBZONE_C from the Description field.
+
+```{r} 
+extract_kml_field <- function(html_text, field_name) {   
+  if (is.na(html_text) || html_text == "") 
+    return(NA_character_)      
+  
+  page <- read_html(html_text)   
+  rows <- page %>% html_elements("tr")      
+  value <- rows %>%     
+    keep(~ html_text2(html_element(.x, "th")) == field_name) %>%      html_element("td") %>%     
+    html_text2()      
+  
+if (length(value) == 0) NA_character_ else value 
+}
+```
+
+```{r} 
+mpsz_sf <- mpsz_sf %>%   
+  mutate(     
+    REGION_N = map_chr(Description, extract_kml_field, "REGION_N"),     
+    PLN_AREA_N = map_chr(Description, extract_kml_field, "PLN_AREA_N"),     
+    SUBZONE_N = map_chr(Description, extract_kml_field, "SUBZONE_N"),     
+    SUBZONE_C = map_chr(Description, extract_kml_field, "SUBZONE_C")   ) %>%   
+  select(-Name, -Description) %>%   
+  relocate(geometry, .after = last_col())
+```
+
+The following code chunk filters the mpsz dataset to remove areas which are not useful for our analysis, including areas outside the main island of singapore and the western and central water catchment areas. The filtered dataset mpsz_cl as an R object to store the dataset for later use without needing to re-run the earlier data manipulation steps.
+
+```{r} 
+mpsz_cl <- mpsz_sf %>%   
+  filter(SUBZONE_N != "SOUTHERN GROUP",          
+         PLN_AREA_N != "WESTERN ISLANDS",          
+         PLN_AREA_N != "NORTH-EASTERN ISLANDS",
+         PLN_AREA_N != "CENTRAL WATER CATCHMENT",
+         PLN_AREA_N != "WESTERN WATER CATCHMENT",
+         )
+```
+
+```{r} 
+write_rds(mpsz_cl,"data/rds/mpsz_cl.rds")
+```
+
+```{r} 
+plot(mpsz_cl)
+```
+we will study the 4 most populous areas in Singapore (Bedok, Jurong West, Tampines, and Woodlands) for this exercise. 
+```{r}
+bedok_owin <- mpsz_cl %>%
+  filter(PLN_AREA_N == "BEDOK") %>%
+  as.owin()
+jw_owin <- mpsz_cl %>%
+  filter(PLN_AREA_N == "JURONG WEST") %>%
+  as.owin()
+tampines_owin <- mpsz_cl %>%
+  filter(PLN_AREA_N == "TAMPINES") %>%
+  as.owin()
+woodlands_owin <- mpsz_cl %>%
+  filter(PLN_AREA_N == "WOODLANDS") %>%
+  as.owin()
+```
+
+```{r}
+sg_owin <- mpsz_cl%>%
+  as.owin()
+```
+## ACRA data
+
+The following code chunk accesses the ACRA dataset inside the acra folder and reads it in as acra_data
+
+```{r}
+folder_path <- "data/aspatial_data"
+file_list <- list.files(path = folder_path,
+                        pattern = "^ACRA*.*\\.csv$",
+                        full.names= TRUE)
+acra_data <- file_list %>%
+  map_dfr(read_csv,show_col_types = FALSE)
+```
+
+```{r}
+write_rds(acra_data,
+          "data/rds/acra_data.rds")
+```
+
+tidying ACRA data
+
+```{r}
+biz_beautycare <- acra_data %>%
+  select(1:24) %>%
+  filter( primary_ssic_code == 96021 | primary_ssic_code == 96022 | primary_ssic_code == 96023) %>%
+  mutate(date=as.Date(registration_incorporation_date),
+         YEAR=year(date),
+         MONTH_NUM=month(date),
+         MONTH_ABBR=month(date, label=TRUE, abbr=TRUE)) %>%
+  mutate(postal_code=str_pad(postal_code, width=6, side="left", pad="0")) %>%
+  filter(YEAR>=2024)
+```
+
+Geocoding
+
+```{r}
+postcodes <- unique (biz_beautycare$postal_code)
+
+url <- "https://onemap.gov.sg/api/common/elastic/search"
+
+found <- data.frame()
+not_found <- data.frame(postcode = character())
+
+for(pc in postcodes) {
+  query <- list(
+    searchVal = pc,
+    returnGeom = "Y",
+    getAddrDetails ="Y",
+    pageNum = "1"
+    )
+  
+res <- GET(url, query=query)
+json <- content(res)
+
+if (json$found != 0) {
+  df <- as.data.frame(json$results, stringsAsFactors=FALSE)
+  df$input_postcode <- pc
+  found <- bind_rows(found, df)
+  } else{
+  not_found <- bind_rows(not_found, data.frame(postcode = pc))
+  }
+}
+```
+
+```{r}
+biz_beautycare=biz_beautycare%>%
+  left_join(found,
+            by=c('postal_code'='POSTAL'))
+
+biz_beautycare_sf <- st_as_sf(biz_beautycare,
+                         coords=c("X","Y"),
+                         crs=3414)
+```
+
+```{r}
+write_rds(biz_beautycare_sf, 
+          "data/rds/biz_beautycare_sf.rds")
+```
+
+```{r}
+biz_beautycare_ppp <- as.ppp(biz_beautycare_sf) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+
+summary(biz_beautycare_ppp)
+```
+
+## 
+
