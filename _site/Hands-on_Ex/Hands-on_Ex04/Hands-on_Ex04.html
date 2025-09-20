@@ -153,7 +153,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
         <li>
     <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex04.html">
- <span class="dropdown-text">Spatio-Temporal Point Patterns Analysis</span></a>
+ <span class="dropdown-text">Spatial Weights and Analysis</span></a>
   </li>  
     </ul>
   </li>
@@ -224,6 +224,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#computing-adaptive-distance-weight-matrix" id="toc-computing-adaptive-distance-weight-matrix" class="nav-link" data-scroll-target="#computing-adaptive-distance-weight-matrix">6.3 Computing adaptive distance weight matrix</a></li>
   </ul></li>
   <li><a href="#weights-based-on-idw" id="toc-weights-based-on-idw" class="nav-link" data-scroll-target="#weights-based-on-idw">7 Weights based on IDW</a></li>
+  <li><a href="#row-standardised-weights-matrix" id="toc-row-standardised-weights-matrix" class="nav-link" data-scroll-target="#row-standardised-weights-matrix">8. <strong>Row-standardised Weights Matrix</strong></a></li>
   <li><a href="#application-of-spatial-weight-matrix" id="toc-application-of-spatial-weight-matrix" class="nav-link" data-scroll-target="#application-of-spatial-weight-matrix">9 Application of Spatial Weight Matrix</a>
   <ul class="collapse">
   <li><a href="#spatial-lag-with-row-standardized-weights" id="toc-spatial-lag-with-row-standardized-weights" class="nav-link" data-scroll-target="#spatial-lag-with-row-standardized-weights">9.1 Spatial lag with row-standardized weights</a></li>
@@ -263,7 +264,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">September 18, 2025</p>
+      <p class="date-modified">September 20, 2025</p>
     </div>
   </div>
     
@@ -351,7 +352,8 @@ GEOGCRS["WGS 84",
 <h3 class="anchored" data-anchor-id="performing-relational-join">3.3 Performing relational join</h3>
 <p>The code chunk below will be used to update the attribute table of hunan’s SpatialPolygonsDataFrame with the attribute fields of hunan2012 dataframe. This is performed by using left_join() of dplyr package.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>hunan <span class="ot">&lt;-</span> <span class="fu">left_join</span>(hunan,hunan2012) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">7</span>, <span class="dv">15</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>hunan <span class="ot">&lt;-</span> <span class="fu">left_join</span>(hunan,hunan2012) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">7</span>, <span class="dv">15</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -1357,6 +1359,9 @@ Non-symmetric neighbours list</code></pre>
 [1] 0.01785036 0.02058034</code></pre>
 </div>
 </div>
+</section>
+<section id="row-standardised-weights-matrix" class="level2">
+<h2 class="anchored" data-anchor-id="row-standardised-weights-matrix">8. <strong>Row-standardised Weights Matrix</strong></h2>
 <p>Next, we need to assign weights to each neighboring polygon. In our case, each neighboring polygon will be assigned equal weight (style=“W”). This is accomplished by assigning the fraction 1/(#ofneighbors) to each neighboring county then summing the weighted income values. While this is the most intuitive way to summaries the neighbors’ values it has one drawback in that polygons along the edges of the study area will base their lagged values on fewer polygons thus potentially over- or under-estimating the true nature of the spatial autocorrelation in the data. For this example, we’ll stick with the style=“W” option for simplicity’s sake but note that other more robust options are available, notably style=“B”.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>rswm_q <span class="ot">&lt;-</span> <span class="fu">nb2listw</span>(wm_q, <span class="at">style=</span><span class="st">"W"</span>, <span class="at">zero.policy =</span> <span class="cn">TRUE</span>)</span>
@@ -1422,8 +1427,10 @@ B 88 7744 8.786867 0.3776535 3.8137</code></pre>
 <h2 class="anchored" data-anchor-id="application-of-spatial-weight-matrix">9 Application of Spatial Weight Matrix</h2>
 <p>In this section, you will learn how to create four different spatial lagged variables, they are:</p>
 <ol type="1">
-<li>spatial lag with row-standardized weights, 2.spatial lag as a sum of neighbouring values,</li>
-<li>spatial window average, and 4.spatial window sum.</li>
+<li>spatial lag with row-standardized weights,</li>
+<li>spatial lag as a sum of neighbouring values,</li>
+<li>spatial window average, and</li>
+<li>spatial window sum.</li>
 </ol>
 <section id="spatial-lag-with-row-standardized-weights" class="level3">
 <h3 class="anchored" data-anchor-id="spatial-lag-with-row-standardized-weights">9.1 Spatial lag with row-standardized weights</h3>
@@ -1574,7 +1581,7 @@ B 88 7744 448 896 10224</code></pre>
 </div>
 </div>
 <blockquote class="blockquote">
-<p>Question: Can you understand the meaning of Spatial lag as a sum of neighboring values now? Answer: Using the sum of neighbouring values instead of row standardised weights allow us to view the total magnitude of the neighbouring effect, and acoids down-weighting the influence of neighbours in areas with many neighbours.</p>
+<p>Question: Can you understand the meaning of Spatial lag as a sum of neighboring values now? Answer: Using the sum of neighbouring values instead of row standardised weights allow us to view the total magnitude of the neighbouring effect, and avoids down-weighting the influence of neighbours in areas with many neighbours.</p>
 </blockquote>
 <p>Next, we will append the lag_sum GDPPC field into hunan sf data frame by using the code chunk below.</p>
 <div class="cell">

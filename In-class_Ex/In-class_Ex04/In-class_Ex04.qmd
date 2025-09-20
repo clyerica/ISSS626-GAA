@@ -1,0 +1,85 @@
+---
+title: "In-class_Ex04"
+format: html
+---
+
+```{r}
+pacman::p_load(sf, ggstatsplot, tmap, tidyverse, knitr, GWmodel)
+```
+
+read in the data and join the hunan and hunan2012 datasets
+
+```{r}
+
+hunan <- st_read(dsn = "data/geospatial", layer = "Hunan")
+st_crs(hunan)
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+hunan_sf <- left_join(hunan, hunan2012) %>% 
+  select(1:4, 7, 15, 16, 31, 32)
+```
+
+Next, convert the data to sp format as GWmodel is built around sp format for handling spatial data in R
+
+```{r}
+hunan_sp <- hunan_sf %>%
+  as_Spatial()
+```
+
+```{r}
+bw_CV <- bw.gwr(GDPPC ~ 1,
+                data = hunan_sp,
+                approach = "CV",
+                adaptive = FALSE, 
+                kernel = "bisquare",
+                longlat = T)
+bw_CV
+```
+
+```{r}
+bw_AIC <- bw.gwr(GDPPC ~ 1,
+             data = hunan_sp, 
+             approach = "AIC",
+             adaptive = FALSE, 
+             kernel = "bisquare",
+             longlat = T
+             )
+bw_AIC
+```
+
+```{r}
+gwstat <- gwss(data = hunan_sp,
+               vars = "GDPPC", 
+               bw = bw_AIC, 
+               kernel = "bisquare",
+               adaptive = FALSE, 
+               longlat = T)
+```
+
+converting gwstat SDF data as a dataframe
+
+```{r}
+gwstat_df <- as.data.frame(gwstat$SDF)
+```
+
+next cbind used to append the dataframe onto the hunan_sf data frame
+
+-   why? join uses a unique identifier to match rows
+
+-   but gwstat does not have any identifier field like COUNTY.
+
+    -   however, since gwstat was derived from the same dataframe and is sorted identically to hunan_sf (i.e., row sequence is the same), as long as no sorting has occurred, we can use cbind to join the two tables without a unique identifier
+
+```{r}
+hunan_gstat <- cbind(hunan_sf, gwstat_df)
+```
+
+```{r}
+
+hunan_lm <- qtm(hunan_gstat, "GDPPC_LM") +
+  tm_layout(
+    legend.position = c("left", "bottom"),
+    scale = 0.5) +
+  tm_title("Distribution of geographically weighted mean")
+
+hunan_lm
+```

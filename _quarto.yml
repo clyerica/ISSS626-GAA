@@ -17,7 +17,7 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02b.html"
           - text: "Spatio-Temporal Point Patterns Analysis"
             href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html"
-          - text: "Spatio-Temporal Point Patterns Analysis"
+          - text: "Spatial Weights and Analysis"
             href: "Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex04.html"
       - text: "In-class Exercise"
         menu: 
@@ -25,6 +25,8 @@ website:
             href: "In-class_Ex/In-class_Ex03/In-class_Ex03a.html"
           - text: "In-class Exercise 3b"
             href: "In-class_Ex/In-class_Ex03/In-class_Ex03b.html"
+          - text: "In-class Exercise 4"
+            href: "In-class_Ex/In-class_Ex04/In-class_Ex04.html"
       - text: "Take-home Exercise"
       
     right:
