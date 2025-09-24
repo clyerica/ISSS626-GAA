@@ -43,7 +43,7 @@ pacman::p_load(sf, terra, spatstat,
 
 The following code chunk imports Master Plan 2019 Subzone (No Sea) dataset into R.
 
--    st_zm() removes Z (elevation) and M (measure) dimensions from geospatial geometries.
+-   st_zm() removes Z (elevation) and M (measure) dimensions from geospatial geometries.
 
 -   st_transform(crs=3414) transforms the projections to svy21
 
@@ -55,6 +55,7 @@ mpsz_sf <- st_read("data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>%
 Next, the following code chunk builds the function extract_kml_field to extract REGION_N, PLN_AREA_N, SUBZONE_N, SUBZONE_C from the Description field.
 
 ```{r}
+#| eval: False 
 extract_kml_field <- function(html_text, field_name) {
   if (is.na(html_text) || html_text == "") return(NA_character_)
   
@@ -71,6 +72,7 @@ extract_kml_field <- function(html_text, field_name) {
 ```
 
 ```{r}
+#| eval: False 
 mpsz_sf <- mpsz_sf %>%
   mutate(
     REGION_N = map_chr(Description, extract_kml_field, "REGION_N"),
@@ -85,6 +87,7 @@ mpsz_sf <- mpsz_sf %>%
 The following code chunk filters the mpsz dataset to remove unnecessary rows (areas outside the main island of Singapore), then saves the filtered dataset mpsz_cl as an R object. This allows us to store the dataset for later use without needing to re-run the earlier data manipulation steps.
 
 ```{r}
+#| eval: False 
 mpsz_cl <- mpsz_sf %>%
   filter(SUBZONE_N != "SOUTHERN GROUP",
          PLN_AREA_N != "WESTERN ISLANDS",
@@ -92,8 +95,14 @@ mpsz_cl <- mpsz_sf %>%
 ```
 
 ```{r}
+#| eval: False 
 write_rds(mpsz_cl, 
           "data/mpsz_cl.rds")
+```
+
+```{r}
+#| echo: False
+mpsz_cl <- read_rds("data/mpsz_cl.rds")
 ```
 
 Next, the following code chunk imports the Childcare Serice data as an sf data frame childcare_sf.

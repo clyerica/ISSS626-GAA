@@ -1,0 +1,1916 @@
+---
+title: "Take-home Exercise 1: Geospatial Analytics for Public Good"
+format: html
+author: "Erica Chan"
+date: "September 24, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+# 1. Introduction
+
+## 1.1 Overview
+
+The locations of businesses and firms are central to urban development, influencing economic growth, job creation, and the availability of resources and services for residents and other businesses. Strategic locations provide competitive advantages, access to talent and infrastructure, and impact brand image and market positioning, while also shaping the city’s overall character and functionality by fostering specialized districts and facilitating efficient supply chains and employee commutes.
+
+In this exercise, we will apply spatial and spatio temporal point pattern analysis methods to:
+
+Identify the “where” and “when” of new business entities, revealing clusters, patterns, and trends that are crucial for informed urban planning, resource allocation, and economic development.
+
+Identify complex interaction patterns and emergent phenomena in the distribution of new businesses beyond simple proximity or density, such as clustering of related businesses, the influence of past trends on future locations, and the overall structural development of commercial areas, which are crucial for scientific urban planning and policy-making.
+
+## 1.2 Scope
+
+In this exercise, we will focus on various types of businesses in the F&B industry, namely restaurants, cafes, and food stalls. Our study area will cover Singapore’s core central region, which is centred around Singapore’s Central Business District and is considered the heart of Singapore’s urban area.
+
+> Our key questions are as follows: What are the spatial and temporal patterns of newly registered F&B businesses in the core central region since January 2024? Are new F&B businesses randomly distributed throughout the region? If the distribution is not random, where are the areas with higher concentrations of F&B businesses?
+
+# 2. Installing and Loading R Packages 
+
+The following R packages are used for this project
+
+
+| Package   | Use  |
+|------|:--------------------|
+| sf        | Provides functions for importing processing and wrangling geospatial data|
+| tidyverse | Contains several core packages such as ggplot2 for data visualisation, dplyr for data manipulation, tidyr for tidying data and readr for data import from file formats like CSV |
+| tmap      | provides functions for plotting cartographic quality thematic maps |
+| httr      | allows interacting with web APIs and making HTTP requests. It provides a set of tools to send requests (GET, POST, PUT, DELETE, etc.) and process the responses received from web servers |
+| terra     | Provides functions for creating, reading, manipulating, and writing raster and vector data. |
+| spatstat  | To perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer |
+| sparr     | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities and relative risk functions, and perform subsequent inference |
+| ggthemes  | Provides pre-built themes to ggplot2 charts |
+| plotly    | Converts ggplot2 figures to interactive Plotly graphs |
+| sparr | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities|
+| gifski | Provides function to convert image files to a gif |
+| stpp | Provides functions to compute and plot spatio-temporal K function |
+
+```{r}
+pacman::p_load(sf, terra, spatstat, 
+               tmap, rvest, tidyverse,
+               httr, ggthemes, plotly,
+               sparr, 
+               gifski, stpp)
+```
+
+For reproducibility of results in this exercise, we will use the seed value `2025`
+
+```{r}
+set.seed(2025)
+```
+
+# 3. The data
+
+To provide answers to the questions above, two data sets will be used. They are:
+
+1.  *ACRA (Accounting and Corporate Regulatory Authority) Information on Corporate Entities* datasets from data.gov.sg, a point feature data providing both location and attribute information of registered businesses in Singapore.
+
+2.  *Master Plan 2019 Subzone Boundary (No Sea)*, a polygon feature data providing information of URA 2019 Master Plan Planning Subzone boundary data.
+
+3.  *Singapore Residents by Planning Area/Subzone, Age Group, Sex and Type of Dwelling, June 2024* (csv). This is an aspatial data file with PA and SZ fields which can be used as unique identifiers to georeference to Master Plan 2019 Subzone Boundary.
+
+    -   This will allow us to compare the population density with the business density of an area
+
+## 3.1 Master Plan 2019 Subzone Boundary
+
+### 3.1.1 Importing and preparing the data
+
+The following code chunk uses the `st_read` function of the **sf** package to import the Master Plan 2019 Subzone (No Sea) dataset into R.
+
+-   `st_zm()` removes Z (elevation) and M (measure) dimensions from geospatial geometries.
+
+-   `st_transform(crs=3414)` transforms the projections to svy21
+
+```{r}
+mpsz_sf <- st_read("data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>%  
+  st_zm(drop = TRUE, what = "ZM") %>% 
+  st_transform(crs = 3414)
+```
+
+Next, the following code chunk builds the function `extract_kml_field` to extract REGION_N, PLN_AREA_N, SUBZONE_N, SUBZONE_C from the Description field.
+
+```{r}
+extract_kml_field <- function(html_text, field_name) {   
+  if (is.na(html_text) || html_text == "") 
+    return(NA_character_)      
+  
+  page <- read_html(html_text)   
+  rows <- page %>% html_elements("tr")      
+  value <- rows %>%     
+    keep(~ html_text2(html_element(.x, "th")) == field_name) %>%      html_element("td") %>%     
+    html_text2()      
+  
+if (length(value) == 0) NA_character_ else value 
+}
+```
+
+```{r}
+mpsz_sf <- mpsz_sf %>%   
+  mutate(     
+    REGION_N = map_chr(Description, extract_kml_field, "REGION_N"),     
+    PLN_AREA_N = map_chr(Description, extract_kml_field, "PLN_AREA_N"),     
+    SUBZONE_N = map_chr(Description, extract_kml_field, "SUBZONE_N"),     
+    SUBZONE_C = map_chr(Description, extract_kml_field, "SUBZONE_C")   ) %>%   
+  select(-Name, -Description) %>%   
+  relocate(geometry, .after = last_col())
+```
+
+The content of mpsz_sf can be examined below
+
+```{r}
+mpsz_sf
+```
+
+### 3.1.2 Filtering for study areas
+
+For this exercise, we will focus on the planning areas within Singapore’s core central region, given its centrality and reputation as the core area for Singapore’s city life. The following code chunks filter out the central region area from the dataset and plot the area.
+
+::: callout-note
+Singapore’s Core Central Region is made up of postal districts 9, 10, 11, Downtown Core Planning Area and Sentosa. For the purposes of this exercise, we will exclude Sentosa from the study area given it is not on the main island.
+:::
+
+```{r}
+cr <- mpsz_sf %>%
+  filter(
+        PLN_AREA_N == "DOWNTOWN CORE" |
+        PLN_AREA_N == "MARINA EAST" |
+        PLN_AREA_N == "MARINA SOUTH" |
+        PLN_AREA_N == "MUSEUM" |
+        PLN_AREA_N == "NEWTON" |
+        PLN_AREA_N == "ORCHARD" |
+        PLN_AREA_N == "OUTRAM" |
+        PLN_AREA_N == "RIVER VALLEY" |
+        PLN_AREA_N == "ROCHOR" | 
+        PLN_AREA_N == "SINGAPORE RIVER" |
+        PLN_AREA_N == "STRAITS VIEW" |
+        PLN_AREA_N == "BUKIT TIMAH" |
+        PLN_AREA_N == "TANGLIN" |
+        PLN_AREA_N =="NOVENA" |
+        PLN_AREA_N == "THOMSON"
+         )
+```
+
+We can plot the geometry of `cr` to check it has been extracted as expected.
+
+```{r}
+plot(st_geometry(cr))
+```
+
+### 3.1.3 Converting to owin object
+
+**spatstat** relies on *owin* objects for observation windows to perform spatial points pattern analyses. As such, the following code chunk uses `as.owin` of **spatstat** package to convert `cr` from *sf* to *owin* object and checks that the class has been converted correctly.
+
+```{r}
+cr_owin = as.owin(cr)
+class(cr_owin)
+```
+
+## 3.2 Population data
+
+### 3.2.1 Loading in the dataset
+
+We use `read_csv()` to read in the Singapore Residents data as `popdata`
+
+```{r}
+popdata <- read_csv("data/respopagesextod2024.csv")
+```
+
+### 3.2.2 Data wrangling
+
+The following code chunk groups the population data by planning area and subzone using `group_by()` of dplyr package, and calculates the total population within each subzone by summing the values in the `Pop` column.
+
+```{r}
+popdata2024 <- popdata %>%
+  group_by(PA, SZ) %>%
+  summarise(`POP` = sum(`Pop`))
+```
+
+### 3.2.3 Joining attribute to geospatial data
+
+The `PA` and `SZ` fields are converted to uppercase to allow matching with the `PLN_AREA_N` and `SUBZONE_N` fields in `cr` using `mutate()` of **dpylr** package.
+
+```{r}
+popdata2024 <- popdata2024 %>%
+  mutate_at(.vars = vars(PA, SZ), 
+          .funs = list(toupper))
+```
+
+Then, `left_join()` of **dplyr** package is used to join the population data to the geospatial data in cr.
+
+```{r}
+cr <- left_join(cr, popdata2024,
+                          by = c("SUBZONE_N" = "SZ"))
+```
+
+## 3.3 ACRA data
+
+The following code chunk accesses the ACRA dataset inside the acra folder and reads it in as `acra_data`
+
+```{r}
+#| eval: false
+folder_path <- "data\\ACRA"
+file_list <- list.files(path = folder_path,
+                        pattern = "^ACRA*.*\\.csv$",
+                        full.names= TRUE)
+acra_data <- file_list %>%
+  map_dfr(read_csv,show_col_types = FALSE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(acra_data, "data/rds/acra_data.rds")
+```
+
+```{r}
+#| echo: false
+acra_data <- read_rds("data/rds/acra_data.rds")
+```
+
+### 3.3.1 Tidying the data
+
+The following code chunks perform the following:
+
+-   selects the first 24 columns from the dataset
+
+-   filters for the respective F&B business types of interest (Cafes, Food Stalls and Restaurants)
+
+-   converts the string value in `registration_incorporation_date` to datetype and saves it under column `date`
+
+-   extracts year (`YEAR`) and month (`MONTH_ABBR`) respectively from `date`
+
+-   creates column `MONTH_NUM` which counts the number of months since Dec 2023, to create an ordinal ranking of the data by month
+
+-   standardises the `postal_code` column to be 6 digits long, for later geocoding
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+#| eval: false
+
+cafes <- acra_data %>%
+  select(1:24) %>%
+  filter( primary_ssic_code == 56112) %>%
+  mutate(date=as.Date(registration_incorporation_date),
+         YEAR=year(date),
+         MONTH_NUM=interval(ymd("2023-12-01"), date) %/% months(1),
+         MONTH_ABBR=month(date, label=TRUE, abbr=TRUE),
+         YEAR_MONTH=format(date,"%Y-%m")) %>%
+  mutate(postal_code=str_pad(postal_code, width=6, side="left", pad="0")) %>%
+  filter(YEAR>=2024)
+```
+
+#### Foodstalls
+
+```{r}
+#| eval: false
+foodstalls<- acra_data %>%
+  select(1:24) %>%
+  filter( primary_ssic_code == 56122) %>%
+  mutate(date=as.Date(registration_incorporation_date),
+         YEAR=year(date),
+         MONTH_NUM=interval(ymd("2023-12-01"), date) %/% months(1),
+         MONTH_ABBR=month(date, label=TRUE, abbr=TRUE),
+         YEAR_MONTH=format(date,"%Y-%m")) %>%
+  mutate(postal_code=str_pad(postal_code, width=6, side="left", pad="0")) %>%
+  filter(YEAR>=2024)
+```
+
+#### Restaurants
+
+```{r}
+#| eval: false
+restaurants <- acra_data %>%
+  select(1:24) %>%
+  filter( primary_ssic_code == 56111) %>%
+  mutate(date=as.Date(registration_incorporation_date),
+         YEAR=year(date),
+         MONTH_NUM=interval(ymd("2023-12-01"), date) %/% months(1),
+         MONTH_ABBR=month(date, label=TRUE, abbr=TRUE),
+         YEAR_MONTH=format(date,"%Y-%m")) %>%
+  mutate(postal_code=str_pad(postal_code, width=6, side="left", pad="0")) %>%
+  filter(YEAR>=2024)
+```
+:::
+
+### 3.3.2 Geocoding the data
+
+The following code chunks perform the following tasks:
+
+-   Extracts the unique postal code for each business from the postal_code field of the tidied tibble data frame,
+
+-   Performs geocoding by submitting the postal codes to SLA OneMap Reverse Geocode API
+
+-   Saves the return results into two data frames namely `found` (for records that the postal codes are found) and `not_found` (for record that postal codes are not found).
+
+-   Tidies the found data frame by only selecting the first ten columns (which contain the relevant information for our study purposes)
+
+-   Appends the location information from `found` to the attribute data frame using `left_join()`
+
+-   Converts the data frame to sf using `st_as_sf` from **sf** package
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+#| eval: false
+postcodes_c <- unique (cafes$postal_code)
+
+url <- "https://onemap.gov.sg/api/common/elastic/search"
+
+found <- data.frame()
+not_found <- data.frame(postcode = character())
+
+for(pc in postcodes_c) {
+  query <- list(
+    searchVal = pc,
+    returnGeom = "Y",
+    getAddrDetails ="Y",
+    pageNum = "1"
+    )
+  
+res <- GET(url, query=query)
+json <- content(res)
+
+if (json$found != 0) {
+  df <- as.data.frame(json$results, stringsAsFactors=FALSE)
+  df$input_postcode <- pc
+  found <- bind_rows(found, df)
+  } else{
+  not_found <- bind_rows(not_found, data.frame(postcode = pc))
+  }
+}
+
+found <- found %>%
+  select(1:10)
+
+cafes = cafes%>%
+  left_join(found,
+            by=c('postal_code'='POSTAL'))
+
+cafes_sf <- st_as_sf(cafes,
+                         coords=c("X","Y"),
+                         crs=3414)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(cafes_sf, "data/rds/cafes_sf.rds")
+```
+
+```{r}
+#| echo: false
+cafes_sf <- read_rds("data/rds/cafes_sf.rds")
+```
+
+#### Food Stalls
+
+```{r}
+#| eval: false
+postcodes_fs <- unique (foodstalls$postal_code)
+
+url <- "https://onemap.gov.sg/api/common/elastic/search" 
+
+found <- data.frame()
+not_found <- data.frame(postcode = character())
+
+for(pc in postcodes_fs) {
+  query <- list(
+    searchVal = pc,
+    returnGeom = "Y",
+    getAddrDetails ="Y",
+    pageNum = "1"
+    )
+  
+res <- GET(url, query=query)
+json <- content(res)
+
+if (json$found != 0) {
+  df <- as.data.frame(json$results, stringsAsFactors=FALSE)
+  df$input_postcode <- pc
+  found <- bind_rows(found, df)
+  } else{
+  not_found <- bind_rows(not_found, data.frame(postcode = pc))
+  }
+}
+found <- found %>%
+  select(1:10)
+
+foodstalls = foodstalls%>%
+  left_join(found,
+            by=c('postal_code'='POSTAL'))
+```
+
+As foodstalls includes one record with missing coordinates, we will remove this record using the following code, before converting the cleaned dataset to sf.
+
+```{r}
+#| eval: false
+foodstalls_clean <- foodstalls[complete.cases(foodstalls$Y), ]
+
+foodstalls_sf <- st_as_sf(foodstalls_clean,
+                         coords=c("X","Y"),
+                         crs=3414)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(foodstalls_sf, "data/rds/foodstalls_sf.rds")
+```
+
+```{r}
+#| echo: false
+foodstalls_sf <- read_rds("data/rds/foodstalls_sf.rds")
+```
+
+#### Restaurants
+
+```{r}
+#| eval: false
+postcodes_r <- unique (restaurants$postal_code)
+
+url <- "https://onemap.gov.sg/api/common/elastic/search"
+
+found <- data.frame()
+not_found <- data.frame(postcode = character())
+
+for(pc in postcodes_r) {
+  query <- list(
+    searchVal = pc,
+    returnGeom = "Y",
+    getAddrDetails ="Y",
+    pageNum = "1"
+    )
+  
+res <- GET(url, query=query)
+json <- content(res)
+
+if (json$found != 0) {
+  df <- as.data.frame(json$results, stringsAsFactors=FALSE)
+  df$input_postcode <- pc
+  found <- bind_rows(found, df)
+  } else{
+  not_found <- bind_rows(not_found, data.frame(postcode = pc))
+  }
+}
+found <- found %>%
+  select(1:10)
+
+restaurants=restaurants%>%
+  left_join(found,
+            by=c('postal_code'='POSTAL'))
+
+restaurants_sf <- st_as_sf(restaurants,
+                         coords=c("X","Y"),
+                         crs=3414)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(restaurants_sf, "data/rds/restaurants_sf.rds")
+```
+
+```{r}
+#| echo: false
+restaurants_sf <- read_rds("data/rds/restaurants_sf.rds")
+```
+:::
+
+### 3.3.3 Creating combined sf
+
+We also create a combined sf dataframe `fnb_sf` with all the datapoints from all the business types studies, labelled with the business type under `TYPE` for later visualisation.
+
+```{r}
+#add labels
+restaurants_labeled <- restaurants_sf %>%
+  mutate(TYPE = "Restaurants")
+
+cafes_labeled <- cafes_sf %>%
+  mutate(TYPE = "Cafes")
+
+foodstalls_labeled <- foodstalls_sf %>%
+  mutate(TYPE = "Food Stalls")
+
+#Combine into a single sf data frame
+fnb_sf <- bind_rows(restaurants_labeled, cafes_labeled, foodstalls_labeled)
+```
+
+As we are focusing on business in the central region, we will filter this dataset for only data points within the `cr` boundary using `st_filter()`. We plot the results to ensure it is as expected.
+
+```{r}
+fnb_cr <- st_filter(fnb_sf, cr)
+plot(st_geometry(cr))
+plot(st_geometry(fnb_cr), add=TRUE)
+```
+
+# 4. Exploratory Data Analysis
+
+In this section, we perform exploratory data analysis to understand underlying trends, patterns and distributions in the data.
+
+## 4.1 Number of businesses registered each month
+
+First, we will visualise the number of newly registered businesses of each type in the core central region from January 2024 to June 2025.
+
+The following code chunk performs the following tasks:
+
+-   uses `group_by()` to **dplyr** package to group data into unique combinations of each month and business type
+
+-   uses `summarise()` from **dplyr** to return a single row for each unique combination of the grouping variables
+
+```{r}
+# Group data by business type and month, and count the number of registered businesses
+
+fnb_by_month <- fnb_cr %>%
+  group_by(TYPE, YEAR_MONTH) %>%
+  summarise(num_fnb = n())
+
+# Plot the data
+
+ggplot(fnb_by_month, aes(YEAR_MONTH, num_fnb, color = factor(TYPE), group = TYPE)) +
+geom_line() +
+labs(
+  title = "Number of F&B Businesses Registered by Month",
+  x = "Date",
+  y = "Number of Businesses",
+  color = "Business type"
+  ) +
+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Observations:
+
+-   The number of food stalls and cafes registered in the core central region each month since January 2024 has remained relatively consistent, whereas there seems to be a downward trend in newly registered restaurants each month.
+
+-   Restaurants are the most commonly newly registered F&B business type in the core central region; in most months, the number of newly registered restaurants is more than double the number of newly registered cafes or food stalls.
+
+## 4.2 Proportion of active businesses of each type
+
+We will also visualise the active status for each business type, derived from the entity status description. This will indicate the churn rate in Singapore’s F&B industry and if particular business types are disproportionately facing challenges causing closure.
+
+The following code chunk allows us to examine the possible values in `entity_status_description`
+
+```{r}
+unique(fnb_cr$entity_status_description)  
+```
+
+Next, the following code chunk creates column `status` which maps “Live Company” and “Live” values as “Active”, and maps all other values as “Not Active”. We then group the data by business type and status to find the total number of businesses of each status type. `mutate()` is also used to calculate the percentage of each business type of active/not active status, to be used as labels in the plotted bar graph.
+
+```{r}
+# map new status values
+fnb_status <- fnb_cr %>%
+  mutate(status = case_when(
+    entity_status_description == "Live Company" |  entity_status_description == "Live" |entity_status_description == "Converted To LLP"  ~ "Active",
+    TRUE ~ "Not Active"
+  ))
+
+# Group data by business type and new status labels
+fnb_by_status <- fnb_status %>% 
+  group_by(TYPE, status) %>% 
+  summarise(num_fnb = n())%>%
+  mutate(percentage = num_fnb/sum(num_fnb)) # calculate % of active/not active for each business type for labels in graph
+
+# Plot the graph
+ggplot(fnb_by_status, aes(fill=status, y=num_fnb, x=TYPE,  label=paste0(round(percentage*100, digits = 1), "%")))+
+labs(
+  title = "Active Status of F&B Businesses",
+  subtitle = "94.0% to 95.5% of F&B businesses in the core central region have remained active since registration.",
+  x = "Business Type",
+  y = "Percentage of F&B Businesses"
+  ) +
+  scale_fill_manual(values = c("Active" = "darkolivegreen3", "Not Active" = "darkorange2"))+
+  geom_col(position = position_stack()) +
+  geom_text(position = position_stack(vjust = .5),  size=3) 
+```
+
+Observations:
+
+-   Restaurants seem to be slightly more successful in the core central region; while 6% of newly registered cafes and food stalls since January 2024 are no longer active, only 4.5% of newly registered restaurants are no longer active
+
+-   However, given that restaurants have a significantly larger number of data points, this could be due cafes and food stalls having a smaller sample size.
+
+## 4.3 Visualising business type density
+
+The code chunk below performs two operations at one go for each business type. Firstly, it identifies the businesses located inside each Planning Subzone by using `st_intersects()`. Next, `length()` of Base R is used to calculate numbers of businesses that fall inside each planning subzone.
+
+```{r}
+# create counts of each fnb business type
+cr$cafes_count <- lengths(st_intersects(cr, cafes_sf))
+cr$foodstalls_count <- lengths(st_intersects(cr, foodstalls_sf))
+cr$restaurants_count <- lengths(st_intersects(cr, restaurants_sf))
+
+#view summary statistics
+summary(cr$cafes_count)
+summary(cr$foodstalls_count)
+summary(cr$restaurants_count)
+```
+
+Next, we create a `Area` column to calculate the area of each planning subzone using `st_area()` of **sf** package. This provides the area in m^2^. Using `mutate()` we then compute the density of each business type as well as the population density in each subzone in km^2^.
+
+```{r}
+cr$Area <- cr %>%
+  st_area()
+cr <- cr %>%
+  mutate(
+    cafes_density = cafes_count/Area * 1000000,
+    foodstalls_density = foodstalls_count/Area * 1000000,
+    restaurants_density = restaurants_count/Area * 1000000,
+    population_density = POP/Area * 1000000
+    )
+```
+
+::::: panel-tabset
+### Business Type Density Histogram
+
+Observations:
+
+-   
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+#| code-fold: true
+
+ggplot(data=cr, 
+       aes(x= as.numeric(cafes_density)))+
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  labs(title = "Cafe density in Singapore's core central region",
+       subtitle= "Many subzones have none to a few cafes. \nThere is one outlier subzone with 91 cafes per km sq (Cecil in Downtown core)",
+      x = "Cafe density (per km sq)",
+      y = "Frequency") +
+      theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+```
+
+#### Food Stalls
+
+```{r}
+#| code-fold: true
+
+ ggplot(data=cr, 
+       aes(x= as.numeric(foodstalls_density)))+
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  labs(title = "Food stalls density in Singapore's core central region",
+       subtitle= "Many subzones have none to a few food stalls. \nThere are three subzones with at least 30 or more food stalls per km sq",
+      x = "Food stalls density (per km sq)",
+      y = "Frequency") +
+      theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+```
+
+#### Restaurants
+
+```{r}
+#| code-fold: true
+
+ ggplot(data=cr, 
+       aes(x= as.numeric(restaurants_density)))+
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  labs(title = "Cafe density in Singapore's core central region",
+       subtitle= "There are many planning subzones with a single pre-school, on the other hand, \nthere are seven planning subzones with at least 30 or more pre-schools",
+      x = "Restaurants density (per km sq)",
+      y = "Frequency") +
+      theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ 
+```
+:::
+
+### Population density by Biz type density Scatterplot
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+#| code-fold: true
+ggplot(data=cr, 
+       aes(y = as.numeric(population_density), 
+           x= as.numeric(cafes_density)))+
+  geom_point(color="salmon") +
+  labs(title = "Cafes",
+      x = "Cafes density (per km sq)",
+      y = "Population density (per km sq)") +
+  xlim(0,275)
+```
+
+#### Food Stalls
+
+```{r}
+#| code-fold: true
+ ggplot(data=cr, 
+       aes(y = as.numeric(population_density), 
+           x= as.numeric(foodstalls_density)))+
+  geom_point(color="steelblue2") +
+  labs(title = "Food Stalls",
+      x = "Food stalls density (per km sq)",
+      y = "Population density (per km sq)") +
+  xlim(0,275)
+```
+
+#### Restaurants
+
+```{r}
+#| code-fold: true
+
+ ggplot(data=cr, 
+       aes(y = as.numeric(population_density), 
+           x= as.numeric(restaurants_density)))+
+  geom_point(color="darkorange", 
+             fill="light blue", stroke=0.2) +
+  labs(title = "Restaurants",
+      x = "Restaurants density (per km sq)",
+      y = "Population density (per km sq)")
+
+```
+:::
+:::
+
+## 4.4 Geospatial visualisation of F&B businesses since Jan 2024 {#sec-map}
+
+The following code chunk uses **tmap** to plot the distribution of the various F&B business types in the core central region, distinguished by color using `fill="TYPE"`.
+
+```{r}
+tmap_mode('view')
+
+tm_shape(cr) +
+  tm_polygons(popup.vars = c("Region" = "REGION_N",
+                         "Planning Area" = "PLN_AREA_N",
+                         "Subzone" = "SUBZONE_N",
+                         "Number of Cafes" = "cafes_count",
+                         "Number of Food Stalls" = "foodstalls_count",
+                         "Number of Restaurants" = "restaurants_count")) +
+tm_shape(fnb_cr)+
+  tm_symbols(fill="TYPE", size=0.3, 
+             popup.vars = c("Business Type" = "TYPE",
+                         "Business name" = "entity_name",
+                         "Registration date" = "date")) +
+tm_view(set_zoom_limits = c(12, 15))
+```
+
+The above map shows most newly registered F&B businesses in core central region are located in subzones in areas such as Downtown Core, Orchard, Outram, Rochor. On the other hand, some areas such as Novena, Straits View, Marina East, and Marina South have no new F&B businesses registered.
+
+The following code chunk sets tmap_mode back to plot.
+
+```{r}
+tmap_mode('plot')
+```
+
+# 5. Spatial Point Pattern Analysis
+
+## 5.1 Testing for Complete Spatial Randomness
+
+### 5.1.1 Creating ppp objects
+
+**spatstat** requires the point event data in *ppp* object form. The code chunk below uses \[`as.ppp()`\] of **spatstat** package to convert *sf* objects to ppp format. `rjitter()` of **spatstat** package applies a small random displacement to the coordinates of all the points in the *ppp* object, this avoids duplicate points in the object.
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+cafes_ppp <- as.ppp(cafes_sf) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+cafes_cr_ppp <- cafes_ppp[cr_owin]
+```
+
+#### Food Stalls
+
+```{r}
+foodstalls_ppp <- as.ppp(foodstalls_sf) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+foodstalls_cr_ppp <- foodstalls_ppp[cr_owin]
+```
+
+#### Restaurants
+
+```{r}
+restaurants_ppp <- as.ppp(restaurants_sf) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+restaurants_cr_ppp <- restaurants_ppp[cr_owin]
+```
+
+#### Combined business types
+
+For the combined business type *ppp* object, we want to ensure that the ppp object is typed using the `TYPE` column in `fnb_sf`, hence we also create a `marks` column in the object. `factor()` is used to create categorical variables from the `TYPE` column. We then check the final *ppp* object to ensure we have successfully created a multitype *ppp* object.
+
+```{r}
+fnb_ppp <- as.ppp(fnb_sf)%>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+fnb_ppp$marks <- factor(fnb_sf$TYPE) 
+fnb_cr_ppp <- fnb_ppp[cr_owin]
+is.multitype(fnb_cr_ppp)
+```
+:::
+
+### 5.1.2 Rescaling ppp objects
+
+The *ppp* objects are currently using meter as the unit of measurement. The following code chunk converts the unit to measurement to kilometers instead.
+
+```{r}
+cafes_cr_ppp.km = rescale.ppp(cafes_cr_ppp, 1000, "km")
+foodstalls_cr_ppp.km = rescale.ppp(foodstalls_cr_ppp, 1000, "km")
+restaurants_cr_ppp.km = rescale.ppp(restaurants_cr_ppp, 1000, "km")
+fnb_cr_ppp.km = rescale.ppp(fnb_cr_ppp, 1000, "km")
+```
+
+### 5.1.3 Performing Clark and Evans Test
+
+Next we will perform the Clark and Evans test as a basis to test for ordering of the point event pattern of the location of newly registered businesses. We use the argument `method="MonteCarlo"` to compute the p-value by comparing R to the results of 999 simulated realisations of Complete Spatial Randomness (CSR) with the observed number of points.
+
+As we use argument `alternative=c('two.sided')` our null and alternative hypotheses are as follows:
+
+-   H~0~: R=0; The point event pattern is regular or ordered
+
+-   H~1~: R =/= 0; the point event pattern is not regular or ordered
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+clarkevans.test(cafes_cr_ppp,
+                correction="none",
+                clipregion=NULL,
+                alternative=c("two.sided"),
+                method="MonteCarlo",
+                nsim=999)
+```
+
+#### Food Stalls
+
+```{r}
+clarkevans.test(foodstalls_cr_ppp,
+                correction="none",
+                clipregion=NULL,
+                alternative=c("two.sided"),
+                method="MonteCarlo",
+                nsim=999)
+```
+
+#### Restaurants
+
+```{r}
+clarkevans.test(restaurants_cr_ppp,
+                correction="none",
+                clipregion=NULL,
+                alternative=c("two.sided"),
+                method="MonteCarlo",
+                nsim=999)
+```
+:::
+
+From the results above, as p-value\<0.05 we can reject the null hypothesis at 95% confidence level and conclude that the point pattern of all newly registered F&B businesses since January 2024 are not a regular or ordered point pattern.
+
+## 5.2 Visualising Kernel Density Estimation
+
+The following code chunks compute and plots the kernel density estimation of the different F&B business types in the central region. This will allow us to compare hotspots between business types.
+
+`sigma=bw.ppl` is used as based on the earlier [visualisation](#sec-map) of the geospatial distribution of F&B businesses , there are multiple areas which seem to show small clusters of F&B businesses, and other areas with empty spots. As we would like to view multiple possible clusters rather than a single tight cluster, we opt for the `bw.ppl()` algorithm over `bw.diggle()`
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+plot(density(cafes_cr_ppp.km,
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Cafes")
+
+```
+
+#### Food Stalls
+
+```{r}
+plot(density(foodstalls_cr_ppp.km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Food Stalls")
+```
+
+#### Restaurants
+
+```{r}
+plot(density(restaurants_cr_ppp.km, 
+             sigma=bw.ppl, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Restaurants")
+```
+:::
+
+From the heat map, the hotpots for cafes, food stalls and restaurants are all largely in the same areas (Outram, Chinatown, Downtown Core, Rochor, etc). Perhaps due to the larger sample size available, key restaurant hotspots are smaller in area, likely down to a subzone level rather than planning area. 
+
+## 5.3 L function
+
+In this section, we perform Monte Carlo simulation using `envelope()` of **spatstat** package to perform a hypothesis test on whether the spatial distribution of newly registered F&B business types are clustered at different scales using the L function. The hypotheses are as follows:
+
+-   H~0~: There is Complete Spatial Randomness (CSR). The points (location of newly registered cafes/food stalls/restaurants) are distributed uniformly and independently across the core central region
+
+-   H~1~: The event point pattern is not a realisation of CSR.
+
+    -   If L(r) \> r, the event point pattern is displaying a clustered pattern
+
+    -   If L(r) \< r, the event point pattern is displaying a dispersed pattern.
+
+::: callout-note
+The code for the interactive plot of the L-function was referenced from [In-Class Exercise 3a](https://isss626-ay2025-26aug.netlify.app/in-class_ex/in-class_ex03/in-class_ex03a). The interactive plot allows us to zoom in and see in more detail the ranges where there is significant clustering/segregation 
+:::
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+#| eval: false
+L_c.csr <- envelope(cafes_cr_ppp.km, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_c.csr, "data/rds/L_c_csr.rds")
+```
+
+```{r}
+#| echo: false
+L_c.csr <- read_rds("data/rds/L_c_csr.rds")
+```
+
+```{r}
+#| code-fold: true
+
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_c.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+
+```
+
+#### Food Stalls
+
+```{r}
+#| eval: false
+L_fs.csr <- envelope(foodstalls_cr_ppp.km, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_fs.csr, "data/rds/L_fs_csr")
+
+```
+
+```{r}
+#| echo: false
+L_fs.csr <- read_rds("data/rds/L_fs_csr.rds")
+```
+
+```{r}
+#| code-fold: true
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_fs.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+#### Restaurants
+
+```{r}
+#| eval: false
+L_r.csr <- envelope(restaurants_cr_ppp.km, Lest,
+                    nsim = 99,
+                    rank = 1,
+                    glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_r.csr, "data/rds/L_r_csr.rds")
+```
+
+```{r}
+#| echo: false
+L_r.csr <- read_rds("data/rds/L_r_csr.rds")
+```
+
+```{r}
+#| code-fold: true
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_r.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+:::
+
+For all three business types, significant clustering is consistently observed from distances as low as less than 0.1km. This confirms our observations from the earlier visualisation that there is clear clustering of each F&B business type in certain areas. 
+
+## 5.4 L-cross function
+
+Aside from the point event pattern of the individual F&B business types, we can also perform hypothesis testing to test the spatial relationship between the individual F&B business types. The hypotheses for this are as follows:
+
+-   H~0~: The two point types are independent of each other
+
+-   H~1~: The two point types are not independent of each other
+
+    -   If L~i,j~(r) is positive, this indicates there is a positive association between point types, i.e., the points are clustered around each other
+
+    -   If L~i,j,~(r) is negative, this indicates there is a negative association between point types, i.e., the points are dispersed or repelled from each other.
+
+As above, we use `envelope()` to perform Monte Carlo simulation for this exercise.
+
+::: panel-tabset
+#### Cafes & Food Stalls
+
+```{r}
+#| eval: false
+L_c_fs.csr <- envelope(fnb_cr_ppp.km, Lcross, 
+                       nsim=99, 
+                       i="Cafes", j="Food Stalls",
+                       rank=1,
+                       glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_c_fs.csr, "data/rds/L_c_fs_csr.rds")
+
+```
+
+```{r}
+#| echo: false
+L_c_fs.csr <- read_rds("data/rds/L_c_fs_csr.rds")
+
+```
+
+```{r}
+#| code-fold: true
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_c_fs.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(i,j,)(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+#### Cafes & Restaurants
+
+```{r}
+#| eval: false
+L_c_r.csr <- envelope(fnb_cr_ppp.km, Lcross, 
+                       nsim=99, 
+                       i="Cafes", j="Restaurants",
+                       rank=1,
+                       glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_c_r.csr, "data/rds/L_c_r_csr.rds")
+
+```
+
+```{r}
+#| echo: false
+L_c_r.csr <- read_rds("data/rds/L_c_r_csr.rds")
+
+```
+
+```{r}
+#| code-fold: true
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_c_r.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(i,j,)(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+#### Food Stalls & Restaurants
+
+```{r}
+#| eval: false
+L_fs_r.csr <- envelope(fnb_cr_ppp.km, Lcross, 
+                       nsim=99, 
+                       i="Food Stalls", j="Restaurants",
+                       rank=1,
+                       glocal=TRUE)
+```
+
+```{r}
+#| echo: false
+#| eval: false
+write_rds(L_fs_r.csr, "data/rds/L_fs_r_csr.rds")
+
+```
+
+```{r}
+#| echo: false
+L_fs_r.csr <- read_rds("data/rds/L_fs_r_csr.rds")
+```
+
+```{r}
+#| code-fold: true
+
+title <- "Pairwise Distance: L function"
+
+Lcsr_df <- as.data.frame(L_fs_r.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(Lcsr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.3, colour=c("#91bfdb")) +
+  xlab("Distance r (km)") +
+  ylab("L(i,j,)(r)-r") +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){ 
+  if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Lcsr_df[Lcsr_df$obs < Lcsr_df$lo,])==0){
+  if (nrow(Lcsr_df[Lcsr_df$obs >= Lcsr_df$lo & Lcsr_df$obs <= Lcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+:::
+
+For all three combinations, significant clustering is consistently observed from distances as low as less than 1km. This means that not only does each F&B business type tend to cluster with other businesses of the same type, they are also likely to be located close to other types of F&B businesses. 
+
+# 6. Spatio-Temporal Point Pattern Analysis
+
+In this section, we aim to analyze the spatio-temporal distribution of newly registered F&B businesses. Incorporating both spatial and temporal dimensions, will allow us to investigate how F&B hotspots evolve over time in the core central region.
+
+## 6.1 Visualising geographic distribution of F&B businesses by month
+
+Using the `lapply()` function from base R, we will generate individual maps displaying the point patterns of new F&B businesses as dots and save them into `all_maps`. The different dot colors correspond with the business type. 
+
+Then, we will create an animated gif using `tmap_animation()` and display the fig using the `include_graphics()` function from **knitr** package
+
+We will create an animated GIF from the series of maps stored in the all_maps object using the tmap_animation() function from the tmap package. After generating the GIF, we will display it using the `include_graphics()` function from the **knitr** package.
+
+::: callout-note
+The code for this was modified based on the code in [Christover Manafe's Take Home Exercise 1](https://isss626-camanafe.netlify.app/take_home_ex/take_home_ex01/take_home_ex01#visualize-tnkde-map) visualising a temporal network kernel density estimation map
+:::
+
+```{r}
+#| eval: false
+
+all_maps <- lapply(1:max(fnb_cr$MONTH_NUM), function(i) {
+  
+  # filter for the month
+  fnb_month <- fnb_cr %>%
+    filter(MONTH_NUM==i)
+  
+  #create title
+  title<- paste("Distribution of F&B Businesses at Month ", i)
+
+  # Plot the map for the current month
+  map <- tm_shape(cr)+
+          tm_polygons() +
+        tm_shape(fnb_month)+
+          tm_symbols(fill="TYPE", size=0.3) +
+    tm_title(title) 
+  return(map)
+  
+})
+
+# creating a gif with all the maps
+tmap_animation(all_maps, filename = "img/fnb_animated.gif", 
+               width = 1200, height = 1000, dpi = 300, delay=50)
+```
+
+```{r}
+# display the gif
+knitr::include_graphics("img/fnb_animated.gif")
+```
+
+Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots. 
+
+## 6.2 Visualising STKDE by Month
+
+Similarly, we will next visualise the spatio temporal kernel density estimation to view the evolution of F&B business hotspots over time. In particular, this will allow us to more easily visualise changes in hotspot intensity.  
+
+### 6.2.1 Extracting F&B business registration by month
+
+The following code chunk removes unnecessary fields from the relevant sf data frames as `as.ppp()` only need requires mark field and geometry field.
+
+
+```{r}
+cafes_month <- cafes_sf %>% 
+  select(MONTH_NUM)
+foodstalls_month <- foodstalls_sf %>% 
+  select(MONTH_NUM)
+restaurants_month <- restaurants_sf %>% 
+  select(MONTH_NUM)
+```
+
+### 6.2.2 Creating *ppp* object
+
+Next, we convert the new sf objects to ppp format as follows. We include `rjitter()` again to avoid issues from potential duplicate points. 
+
+```{r}
+cafes_month_ppp <- as.ppp(cafes_month) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+foodstalls_month_ppp <- as.ppp(foodstalls_month) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+restaurants_month_ppp <- as.ppp(restaurants_month) %>%
+  rjitter(retry=TRUE,
+          nsim=1,
+          drop=TRUE)
+```
+
+We then confirm that there are no duplicated event points using the following code chunks. 
+```{r}
+any(duplicated(cafes_month_ppp))
+any(duplicated(foodstalls_month_ppp))
+any(duplicated(restaurants_month_ppp))
+```
+
+### 6.2.3 Including owin object
+The following code chunks combine the ppp objects with `cr_owin` to limit the visualisation to point events within the core central region. We then plot the owin object to check correctness of the output. 
+::: panel-tabset
+#### Cafes
+
+```{r}
+cafes_month_owin <- cafes_month_ppp[cr_owin]
+plot(cafes_month_owin)
+```
+
+#### Food Stalls
+
+```{r}
+foodstalls_month_owin <- foodstalls_month_ppp[cr_owin]
+plot(foodstalls_month_owin)
+```
+
+#### Restaurants
+
+```{r}
+restaurants_month_owin <- restaurants_month_ppp[cr_owin]
+plot(restaurants_month_owin)
+```
+:::
+
+### 6.2.4 Computing and plotting spatio-temporal KDE
+
+
+#### Computation
+The following code chunk uses BOOT.spattemp() to determine both the spatial bandwidth and the scalar temporal bandwidth for the visualisations based on bootstrap estimation. The values derives will be used as the `h` and `lambda` values when deriving the STKDE using `spattemp.density`.
+
+We then plot each time slice from the resulting object and save it as a png using a for loop. The image files are then converted into a gif using `gifski()` from `gifski` package.
+
+:::panel-tabset
+##### Cafes
+```{r}
+#| eval: false
+
+BOOT.spattemp(cafes_month_owin) 
+```
+
+```{r}
+st_kde_cafes <- spattemp.density(cafes_month_owin,
+                                 h = 610,
+                             lambda = 5)
+```
+
+```{r}
+summary(st_kde_cafes)
+```
+
+```{r}
+#| eval: false
+
+# find upper limit of density range to ensure fixed range for color bar when plotting
+max_z <- 0
+for (t_slice in st_kde_cafes$z) {
+  max_z <- max(max_z, max(t_slice$v, na.rm = TRUE))
+}
+
+# iterate through each time slice and save the map as a png 
+
+density_maps <- st_kde_cafes$z
+for (i in 1:length(density_maps)) {
+  # Construct a filename for each timeslice
+  filename <- paste0("img/cafes/timeslice_", sprintf("%02d", i), ".png")
+
+  # Open the PNG graphics device to start recording the plot
+  png(filename = filename, 
+      width = 1000, 
+      height = 1000, 
+      res = 100)
+
+  # Plot the current timeslice from the list
+  plot(density_maps[[i]], zlim = c(0, max_z), main = paste("Timeslice", i))
+
+  # Close the graphics device to save the png file
+  dev.off()
+}
+
+image_files <- list.files(path = "img/cafes", 
+                          pattern = "*.png", 
+                          full.names = TRUE)
+
+# convert image frames into a gif and save it
+gifski(
+  image_files, 
+  gif_file = "img/cafes_animation.gif", 
+  width = 1000, 
+  height = 1000,
+  delay = 0.5 # Adjust delay to control speed
+)
+```
+
+
+##### Food Stalls
+
+```{r}
+#| eval: false
+
+BOOT.spattemp(foodstalls_month_owin) 
+```
+
+```{r}
+st_kde_foodstalls <- spattemp.density(foodstalls_month_owin,
+                                      h = 715,
+                                      lambda = 5)
+```
+
+```{r}
+summary(st_kde_foodstalls)
+```
+
+```{r}
+#|eval: false
+
+# find upper limit of density range to ensure fixed range for color bar when plotting
+max_z <- 0
+for (t_slice in st_kde_foodstalls$z) {
+  max_z <- max(max_z, max(t_slice$v, na.rm = TRUE))
+}
+
+# iterate through each time slice and save the map as a png 
+
+density_maps <- st_kde_foodstalls$z
+for (i in 1:length(density_maps)) {
+  # Construct a filename for each timeslice
+  filename <- paste0("img/foodstalls/timeslice_", sprintf("%02d", i), ".png")
+
+  # Open the PNG graphics device to start recording the plot
+  png(filename = filename, 
+      width = 1000, 
+      height = 1000, 
+      res = 100)
+
+  # Plot the current timeslice from the list
+  plot(density_maps[[i]], zlim = c(0, max_z), main = paste("Timeslice", i))
+
+  # Close the graphics device to save the file
+  dev.off()
+}
+
+image_files <- list.files(path = "img/foodstalls", 
+                          pattern = "*.png", 
+                          full.names = TRUE)
+
+# convert image frames into a gif and save it
+gifski(
+  image_files, 
+  gif_file = "img/foodstalls_animation.gif", 
+  width = 1000, 
+  height = 1000,
+  delay = 0.5 # Adjust delay to control speed
+)
+```
+
+##### Restaurants
+
+```{r}
+#| eval: false
+
+BOOT.spattemp(restaurants_month_owin) 
+```
+
+```{r}
+st_kde_restaurants <- spattemp.density(restaurants_month_owin,
+                                 h = 240,
+                             lambda = 6)
+```
+
+```{r}
+summary(st_kde_restaurants)
+```
+
+```{r} # find upper limit of density range to ensure fixed range for color bar when plotting}
+
+max_z <- 0
+for (t_slice in st_kde_restaurants$z) {
+  max_z <- max(max_z, max(t_slice$v, na.rm = TRUE))
+}
+
+# iterate through each time slice and save the map as a png 
+
+density_maps <- st_kde_restaurants$z
+for (i in 1:length(density_maps)) {
+  # Construct a filename for each timeslice
+  filename <- paste0("img/restaurants/timeslice_", sprintf("%02d", i), ".png")
+
+  # Open the PNG graphics device to start recording the plot
+  png(filename = filename, 
+      width = 1000, 
+      height = 1000, 
+      res = 100)
+
+  # Plot the current timeslice from the list
+  plot(density_maps[[i]], zlim = c(0, max_z), main = paste("Timeslice", i))
+
+  # Close the graphics device to save the file
+  dev.off()
+}
+
+image_files <- list.files(path = "img/restaurants", 
+                          pattern = "*.png", 
+                          full.names = TRUE)
+
+# convert image frames into a gif and save it
+gifski(
+  image_files, 
+  gif_file = "img/restaurants_animation.gif", 
+  width = 1000, 
+  height = 1000,
+  delay = 0.5 # Adjust delay to control speed
+)
+```
+:::
+
+#### Plots
+
+Finally, the resulting gif is displayed using `include_graphics() function` from the **knitr** package.
+
+::: panel-tabset
+##### Cafes
+```{r}
+knitr::include_graphics("img/cafes_animation.gif")
+```
+
+##### Foodstalls
+```{r}
+knitr::include_graphics("img/foodstalls_animation.gif")
+```
+
+##### Restaurants
+```{r}
+knitr::include_graphics("img/restaurants_animation.gif")
+```
+:::
+
+As observed earlier, the general hotspot areas remain consistent over time. However, the intensity of the hotspot has decreased since January 2024. This indicates fewer new businesses are located in these areas recently, though the area remains popular. This is not surprising given we saw earlier that the monthly count  of newly registered restaurants in the central region has been decreasing. This could be due to various reasons, such as oversaturation of the market in the area, increasing barriers to entry or decreasing appeal of the area. 
+
+## 6.3 Spatio Temporal K function
+
+Finally, we will use analyse whether the point patterns distribution in space and time are random or not. For this, we will use the inhomogenous K-function, which is a second order analysis, The hypotheses are as follows:
+
+- H~0~: The location and timing of event points (newly registered businesses) are independent of all other events. 
+- H~1~: Location and timing of newly registered businesses are not independent of other new businesses. 
+
+### 6.3.1 Preparing spatio-temporal point process object
+
+The following code chunk extracts the business location coordinates from the respective sf data frames. 
+```{r}
+cafes_coords <- st_coordinates(cafes_sf)
+foodstalls_coords <- st_coordinates(foodstalls_sf)
+restaurants_coords <- st_coordinates(restaurants_sf)
+```
+
+Next, we create new data frames by combining the x- and y-coordinates and temporal event (`MONTH_NUM`). using `as.3dpoints()` from **stpp** package then converts the data frame to spatio-temporal object class. 
+
+```{r}
+cafes_stpp <- data.frame(
+  x = cafes_coords[, 1],  
+  y = cafes_coords[, 2],
+  t = cafes_sf$`MONTH_NUM`) %>%
+  as.3dpoints() 
+foodstalls_stpp <- data.frame(
+  x = foodstalls_coords[, 1],  
+  y = foodstalls_coords[, 2],
+  t = foodstalls_sf$`MONTH_NUM`) %>%
+  as.3dpoints() 
+restaurants_stpp <- data.frame(
+  x = restaurants_coords[, 1],  
+  y = restaurants_coords[, 2],
+  t = restaurants_sf$`MONTH_NUM`) %>%
+  as.3dpoints() 
+```
+
+The following code chunks visualise the stpp objects to check correctness of the output. 
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+plot(cafes_stpp)
+```
+
+#### Food Stalls
+
+```{r}
+plot(foodstalls_stpp)
+```
+
+#### Restaurants
+
+```{r}
+plot(restaurants_stpp)
+```
+:::
+
+### 6.3. Computing and Plotting the Spatio-Temporal K Function
+
+Next, `STIKhat()` of **stpp** package computes the space-time inhomogenous K function. Finally, plotK() is used to visualise the output. 
+
+::: panel-tabset
+#### Cafes
+
+```{r}
+cafes_stik <- STIKhat(cafes_stpp)
+```
+```{r}
+plotK(cafes_stik)
+```
+
+#### Food Stalls
+
+```{r}
+foodstalls_stik <- STIKhat(foodstalls_stpp)
+```
+```{r}
+#| eval: true
+plotK(foodstalls_stik)
+```
+
+#### Restaurants
+
+```{r}
+restaurants_stik <- STIKhat(restaurants_stpp)
+```
+```{r}
+plotK(restaurants_stik)
+```
+:::
+
+The contours show high values for relatively small values of uu and vv. This suggests that clustering occurs at short spatial and temporal distances, meaning new F&B businesses occur close to each other in both space and time for all business types. 
+
+# 7. Key findings and potential further research
+
+1. F&B businesses tend to cluster together with similar and different business types. 
+  In particular, this clustering appears most pronounced in areas such as Chinatown, Outram, Orchard, Rochor, etc. This might indicate that the industry is resilient to relatively high levels of competition within the same area. On the other hand, there are areas where there have been no new F&B business registrations over the 19 month period of study. It might be useful to study the differences in attributes of areas where there is strong clustering and where businesses are avoiding to potentially uncover key factors which encourage/discourage the F&B industry.
+
+2. Consistent F&B hotspots but  declining intensity. 
+  While the areas mentioned above are consistent hotspots for F&B businesses, there is a decline in the number of new businesses in these areas. This may warrant further study to the reasons, whether it was due to a post-COVID-19 boom in 2024, or other reasons such as oversaturation of the market in the area, which may prompt future planning to make other areas more conducive for F&B businesses. 
+
+# 8. Further Improvements
+
+This topic can be further expanded on in multiple ways to provide greater depth and strenght of analysis of the spatio-temporal patterns of newly registered F&B businesses in Singapore. 
+
+1. Focusing on other key regions in Singapore. 
+  This exercise focused only on a section of Singapore's central region. There are other areas which may be of interest to study, such as the Northeast region which is the most densely populated in Singapore. 
+
+2. Focusing on different levels of areas in Singapore.
+  This exercise used a section of a region in Singapore. It may also be of use to study spatio temporal patterns at the planning area or subzone level to see if patterns change at different spatial levels. 
+
+3. Exploring other temporal aspects.
+  This exercise only studied the monthly patterns of newly registered F&B businesses. It may be useful to consider other timeframes, such as quarterly or yearly. These would also allow us to use more historical data than 19 months, which may make results more robust. 
+
+4. Incorporating other attribute/location data. 
+  It may be useful to incorporate other data which may be of interest, such as including the road networks or MRT locationsto consider the accessibility factor of the businesses, or possible barriers to new businesses such as average rent prices of each area. 
