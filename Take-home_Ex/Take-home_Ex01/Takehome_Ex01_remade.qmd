@@ -1501,13 +1501,13 @@ all_maps <- lapply(1:max(fnb_cr$MONTH_NUM), function(i) {
 })
 
 # creating a gif with all the maps
-tmap_animation(all_maps, filename = "img/fnb_animated.gif", 
+tmap_animation(all_maps, filename = "images/fnb_animated.gif", 
                width = 1200, height = 1000, dpi = 300, delay=50)
 ```
 
 ```{r}
 # display the gif
-knitr::include_graphics("img/fnb_animated.gif")
+knitr::include_graphics("images/fnb_animated.gif")
 ```
 
 Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots.
@@ -1622,7 +1622,7 @@ for (t_slice in st_kde_cafes$z) {
 density_maps <- st_kde_cafes$z
 for (i in 1:length(density_maps)) {
   # Construct a filename for each timeslice
-  filename <- paste0("img/cafes/timeslice_", sprintf("%02d", i), ".png")
+  filename <- paste0("images/cafes/timeslice_", sprintf("%02d", i), ".png")
 
   # Open the PNG graphics device to start recording the plot
   png(filename = filename, 
@@ -1637,14 +1637,14 @@ for (i in 1:length(density_maps)) {
   dev.off()
 }
 
-image_files <- list.files(path = "img/cafes", 
+image_files <- list.files(path = "images/cafes", 
                           pattern = "*.png", 
                           full.names = TRUE)
 
 # convert image frames into a gif and save it
 gifski(
   image_files, 
-  gif_file = "img/cafes_animation.gif", 
+  gif_file = "images/cafes_animation.gif", 
   width = 1000, 
   height = 1000,
   delay = 0.5 # Adjust delay to control speed
@@ -1681,7 +1681,7 @@ for (t_slice in st_kde_foodstalls$z) {
 density_maps <- st_kde_foodstalls$z
 for (i in 1:length(density_maps)) {
   # Construct a filename for each timeslice
-  filename <- paste0("img/foodstalls/timeslice_", sprintf("%02d", i), ".png")
+  filename <- paste0("images/foodstalls/timeslice_", sprintf("%02d", i), ".png")
 
   # Open the PNG graphics device to start recording the plot
   png(filename = filename, 
@@ -1696,14 +1696,14 @@ for (i in 1:length(density_maps)) {
   dev.off()
 }
 
-image_files <- list.files(path = "img/foodstalls", 
+image_files <- list.files(path = "images/foodstalls", 
                           pattern = "*.png", 
                           full.names = TRUE)
 
 # convert image frames into a gif and save it
 gifski(
   image_files, 
-  gif_file = "img/foodstalls_animation.gif", 
+  gif_file = "images/foodstalls_animation.gif", 
   width = 1000, 
   height = 1000,
   delay = 0.5 # Adjust delay to control speed
@@ -1741,7 +1741,7 @@ for (t_slice in st_kde_restaurants$z) {
 density_maps <- st_kde_restaurants$z
 for (i in 1:length(density_maps)) {
   # Construct a filename for each timeslice
-  filename <- paste0("img/restaurants/timeslice_", sprintf("%02d", i), ".png")
+  filename <- paste0("images/restaurants/timeslice_", sprintf("%02d", i), ".png")
 
   # Open the PNG graphics device to start recording the plot
   png(filename = filename, 
@@ -1756,14 +1756,14 @@ for (i in 1:length(density_maps)) {
   dev.off()
 }
 
-image_files <- list.files(path = "img/restaurants", 
+image_files <- list.files(path = "images/restaurants", 
                           pattern = "*.png", 
                           full.names = TRUE)
 
 # convert image frames into a gif and save it
 gifski(
   image_files, 
-  gif_file = "img/restaurants_animation.gif", 
+  gif_file = "images/restaurants_animation.gif", 
   width = 1000, 
   height = 1000,
   delay = 0.5 # Adjust delay to control speed
@@ -1779,19 +1779,19 @@ Finally, the resulting gif is displayed using `include_graphics() function` from
 ##### Cafes
 
 ```{r}
-knitr::include_graphics("img/cafes_animation.gif")
+knitr::include_graphics("images/cafes_animation.gif")
 ```
 
 ##### Foodstalls
 
 ```{r}
-knitr::include_graphics("img/foodstalls_animation.gif")
+knitr::include_graphics("images/foodstalls_animation.gif")
 ```
 
 ##### Restaurants
 
 ```{r}
-knitr::include_graphics("img/restaurants_animation.gif")
+knitr::include_graphics("images/restaurants_animation.gif")
 ```
 :::
 
