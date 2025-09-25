@@ -27,25 +27,24 @@ Identify complex interaction patterns and emergent phenomena in the distribution
 
 In this exercise, we will focus on various types of businesses in the F&B industry, namely restaurants, cafes, and food stalls. Our study area will cover Singapore’s core central region, which is centred around Singapore’s Central Business District and is considered the heart of Singapore’s urban area.
 
-> Our key questions are as follows: What are the spatial and temporal patterns of newly registered F&B businesses in the core central region since January 2024? Are new F&B businesses randomly distributed throughout the region? If the distribution is not random, where are the areas with higher concentrations of F&B businesses?
+> Our key questions are as follows: What are the spatial and temporal patterns of newly registered F&B businesses in the core central region since January 2024? Are new F&B businesses randomly distributed throughout the region and over time? If the distribution is not random, where are the areas with higher concentrations of F&B businesses?
 
-# 2. Installing and Loading R Packages 
+# 2. Installing and Loading R Packages
 
 The following R packages are used for this project
 
-
-| Package   | Use  |
-|------|:--------------------|
-| sf        | Provides functions for importing processing and wrangling geospatial data|
+| Package | Use |
+|----|:---|
+| sf | Provides functions for importing processing and wrangling geospatial data |
 | tidyverse | Contains several core packages such as ggplot2 for data visualisation, dplyr for data manipulation, tidyr for tidying data and readr for data import from file formats like CSV |
-| tmap      | provides functions for plotting cartographic quality thematic maps |
-| httr      | allows interacting with web APIs and making HTTP requests. It provides a set of tools to send requests (GET, POST, PUT, DELETE, etc.) and process the responses received from web servers |
-| terra     | Provides functions for creating, reading, manipulating, and writing raster and vector data. |
-| spatstat  | To perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer |
-| sparr     | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities and relative risk functions, and perform subsequent inference |
-| ggthemes  | Provides pre-built themes to ggplot2 charts |
-| plotly    | Converts ggplot2 figures to interactive Plotly graphs |
-| sparr | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities|
+| tmap | provides functions for plotting cartographic quality thematic maps |
+| httr | allows interacting with web APIs and making HTTP requests. It provides a set of tools to send requests (GET, POST, PUT, DELETE, etc.) and process the responses received from web servers |
+| terra | Provides functions for creating, reading, manipulating, and writing raster and vector data. |
+| spatstat | To perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer |
+| sparr | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities and relative risk functions, and perform subsequent inference |
+| ggthemes | Provides pre-built themes to ggplot2 charts |
+| plotly | Converts ggplot2 figures to interactive Plotly graphs |
+| sparr | Provides functions to estimate kernel-smoothed spatial and spatio-temporal densities |
 | gifski | Provides function to convert image files to a gif |
 | stpp | Provides functions to compute and plot spatio-temporal K function |
 
@@ -53,8 +52,7 @@ The following R packages are used for this project
 pacman::p_load(sf, terra, spatstat, 
                tmap, rvest, tidyverse,
                httr, ggthemes, plotly,
-               sparr, 
-               gifski, stpp)
+               sparr, gifski, stpp)
 ```
 
 For reproducibility of results in this exercise, we will use the seed value `2025`
@@ -96,7 +94,7 @@ Next, the following code chunk builds the function `extract_kml_field` to extrac
 ```{r}
 extract_kml_field <- function(html_text, field_name) {   
   if (is.na(html_text) || html_text == "") 
-    return(NA_character_)      
+    return(NA_character_)         
   
   page <- read_html(html_text)   
   rows <- page %>% html_elements("tr")      
@@ -520,7 +518,7 @@ First, we will visualise the number of newly registered businesses of each type 
 
 The following code chunk performs the following tasks:
 
--   uses `group_by()` to **dplyr** package to group data into unique combinations of each month and business type
+-   uses `group_by()` ffrom **dplyr** package to group data into unique combinations of each month and business type
 
 -   uses `summarise()` from **dplyr** to return a single row for each unique combination of the grouping variables
 
@@ -629,10 +627,6 @@ cr <- cr %>%
 ::::: panel-tabset
 ### Business Type Density Histogram
 
-Observations:
-
--   
-
 ::: panel-tabset
 #### Cafes
 
@@ -692,6 +686,11 @@ ggplot(data=cr,
 
 ### Population density by Biz type density Scatterplot
 
+Observations:
+
+-   There is no clear relationship between population density and and F&B business density. Relatively low business density can occur regardless of population density.
+-   Generally, higher high restaurant density (over 50 per km sq) happens in areas with relatively lower population density.
+
 ::: panel-tabset
 #### Cafes
 
@@ -737,7 +736,7 @@ ggplot(data=cr,
 
 ```
 :::
-:::
+:::::
 
 ## 4.4 Geospatial visualisation of F&B businesses since Jan 2024 {#sec-map}
 
@@ -920,7 +919,7 @@ plot(density(restaurants_cr_ppp.km,
 ```
 :::
 
-From the heat map, the hotpots for cafes, food stalls and restaurants are all largely in the same areas (Outram, Chinatown, Downtown Core, Rochor, etc). Perhaps due to the larger sample size available, key restaurant hotspots are smaller in area, likely down to a subzone level rather than planning area. 
+From the heat map, the hotpots for cafes, food stalls and restaurants are all largely in the same areas (Outram, Chinatown, Downtown Core, Rochor, etc). Perhaps due to the larger sample size available, key restaurant hotspots are smaller in area, likely down to a subzone level rather than planning area.
 
 ## 5.3 L function
 
@@ -935,7 +934,7 @@ In this section, we perform Monte Carlo simulation using `envelope()` of **spats
     -   If L(r) \< r, the event point pattern is displaying a dispersed pattern.
 
 ::: callout-note
-The code for the interactive plot of the L-function was referenced from [In-Class Exercise 3a](https://isss626-ay2025-26aug.netlify.app/in-class_ex/in-class_ex03/in-class_ex03a). The interactive plot allows us to zoom in and see in more detail the ranges where there is significant clustering/segregation 
+The code for the interactive plot of the L-function was referenced from [In-Class Exercise 3a](https://isss626-ay2025-26aug.netlify.app/in-class_ex/in-class_ex03/in-class_ex03a). The interactive plot allows us to zoom in and see in more detail the ranges where there is significant clustering/segregation
 :::
 
 ::: panel-tabset
@@ -1189,7 +1188,7 @@ if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){
 ```
 :::
 
-For all three business types, significant clustering is consistently observed from distances as low as less than 0.1km. This confirms our observations from the earlier visualisation that there is clear clustering of each F&B business type in certain areas. 
+For all three business types, significant clustering is consistently observed from distances as low as less than 0.1km. This confirms our observations from the earlier visualisation that there is clear clustering of each F&B business type in certain areas.
 
 ## 5.4 L-cross function
 
@@ -1462,7 +1461,7 @@ if (nrow(Lcsr_df[Lcsr_df$obs > Lcsr_df$hi,])==0){
 ```
 :::
 
-For all three combinations, significant clustering is consistently observed from distances as low as less than 1km. This means that not only does each F&B business type tend to cluster with other businesses of the same type, they are also likely to be located close to other types of F&B businesses. 
+For all three combinations, significant clustering is consistently observed from distances as low as less than 1km. This means that not only does each F&B business type tend to cluster with other businesses of the same type, they are also likely to be located close to other types of F&B businesses.
 
 # 6. Spatio-Temporal Point Pattern Analysis
 
@@ -1470,7 +1469,7 @@ In this section, we aim to analyze the spatio-temporal distribution of newly reg
 
 ## 6.1 Visualising geographic distribution of F&B businesses by month
 
-Using the `lapply()` function from base R, we will generate individual maps displaying the point patterns of new F&B businesses as dots and save them into `all_maps`. The different dot colors correspond with the business type. 
+Using the `lapply()` function from base R, we will generate individual maps displaying the point patterns of new F&B businesses as dots and save them into `all_maps`. The different dot colors correspond with the business type.
 
 Then, we will create an animated gif using `tmap_animation()` and display the fig using the `include_graphics()` function from **knitr** package
 
@@ -1512,16 +1511,15 @@ tmap_animation(all_maps, filename = "img/fnb_animated.gif",
 knitr::include_graphics("img/fnb_animated.gif")
 ```
 
-Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots. 
+Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots.
 
 ## 6.2 Visualising STKDE by Month
 
-Similarly, we will next visualise the spatio temporal kernel density estimation to view the evolution of F&B business hotspots over time. In particular, this will allow us to more easily visualise changes in hotspot intensity.  
+Similarly, we will next visualise the spatio temporal kernel density estimation to view the evolution of F&B business hotspots over time. In particular, this will allow us to more easily visualise changes in hotspot intensity.
 
 ### 6.2.1 Extracting F&B business registration by month
 
 The following code chunk removes unnecessary fields from the relevant sf data frames as `as.ppp()` only need requires mark field and geometry field.
-
 
 ```{r}
 cafes_month <- cafes_sf %>% 
@@ -1534,7 +1532,7 @@ restaurants_month <- restaurants_sf %>%
 
 ### 6.2.2 Creating *ppp* object
 
-Next, we convert the new sf objects to ppp format as follows. We include `rjitter()` again to avoid issues from potential duplicate points. 
+Next, we convert the new sf objects to ppp format as follows. We include `rjitter()` again to avoid issues from potential duplicate points.
 
 ```{r}
 cafes_month_ppp <- as.ppp(cafes_month) %>%
@@ -1551,7 +1549,8 @@ restaurants_month_ppp <- as.ppp(restaurants_month) %>%
           drop=TRUE)
 ```
 
-We then confirm that there are no duplicated event points using the following code chunks. 
+We then confirm that there are no duplicated event points using the following code chunks.
+
 ```{r}
 any(duplicated(cafes_month_ppp))
 any(duplicated(foodstalls_month_ppp))
@@ -1559,7 +1558,9 @@ any(duplicated(restaurants_month_ppp))
 ```
 
 ### 6.2.3 Including owin object
-The following code chunks combine the ppp objects with `cr_owin` to limit the visualisation to point events within the core central region. We then plot the owin object to check correctness of the output. 
+
+The following code chunks combine the ppp objects with `cr_owin` to limit the visualisation to point events within the core central region. We then plot the owin object to check correctness of the output.
+
 ::: panel-tabset
 #### Cafes
 
@@ -1585,14 +1586,15 @@ plot(restaurants_month_owin)
 
 ### 6.2.4 Computing and plotting spatio-temporal KDE
 
-
 #### Computation
-The following code chunk uses BOOT.spattemp() to determine both the spatial bandwidth and the scalar temporal bandwidth for the visualisations based on bootstrap estimation. The values derives will be used as the `h` and `lambda` values when deriving the STKDE using `spattemp.density`.
 
-We then plot each time slice from the resulting object and save it as a png using a for loop. The image files are then converted into a gif using `gifski()` from `gifski` package.
+The following code chunk uses `BOOT.spattemp()` to determine both the spatial bandwidth and the scalar temporal bandwidth for the visualisations based on bootstrap estimation. The values derives will be used as the `h` and `lambda` values when deriving the STKDE using `spattemp.density`.
 
-:::panel-tabset
+We then plot each time slice from the resulting object and save it as a png using a for loop. The image files are then converted into a gif using `gifski()` from **gifski** package.
+
+::: panel-tabset
 ##### Cafes
+
 ```{r}
 #| eval: false
 
@@ -1652,7 +1654,6 @@ gifski(
 )
 ```
 
-
 ##### Food Stalls
 
 ```{r}
@@ -1672,7 +1673,7 @@ summary(st_kde_foodstalls)
 ```
 
 ```{r}
-#|eval: false
+#| eval: false
 
 # find upper limit of density range to ensure fixed range for color bar when plotting
 max_z <- 0
@@ -1732,7 +1733,8 @@ st_kde_restaurants <- spattemp.density(restaurants_month_owin,
 summary(st_kde_restaurants)
 ```
 
-```{r} # find upper limit of density range to ensure fixed range for color bar when plotting}
+```{r}
+# find upper limit of density range to ensure fixed range for color bar when plotting}
 
 max_z <- 0
 for (t_slice in st_kde_restaurants$z) {
@@ -1780,40 +1782,44 @@ Finally, the resulting gif is displayed using `include_graphics() function` from
 
 ::: panel-tabset
 ##### Cafes
+
 ```{r}
 knitr::include_graphics("img/cafes_animation.gif")
 ```
 
 ##### Foodstalls
+
 ```{r}
 knitr::include_graphics("img/foodstalls_animation.gif")
 ```
 
 ##### Restaurants
+
 ```{r}
 knitr::include_graphics("img/restaurants_animation.gif")
 ```
 :::
 
-As observed earlier, the general hotspot areas remain consistent over time. However, the intensity of the hotspot has decreased since January 2024. This indicates fewer new businesses are located in these areas recently, though the area remains popular. This is not surprising given we saw earlier that the monthly count  of newly registered restaurants in the central region has been decreasing. This could be due to various reasons, such as oversaturation of the market in the area, increasing barriers to entry or decreasing appeal of the area. 
+As observed earlier, the general hotspot areas remain consistent over time. However, the intensity of the hotspot has decreased since January 2024. This indicates fewer new businesses are located in these areas recently, though the area remains popular. This is not surprising given we saw earlier that the monthly count of newly registered restaurants in the central region has been decreasing. This could be due to various reasons, such as oversaturation of the market in the area, increasing barriers to entry or decreasing appeal of the area.
 
 ## 6.3 Spatio Temporal K function
 
 Finally, we will use analyse whether the point patterns distribution in space and time are random or not. For this, we will use the inhomogenous K-function, which is a second order analysis, The hypotheses are as follows:
 
-- H~0~: The location and timing of event points (newly registered businesses) are independent of all other events. 
-- H~1~: Location and timing of newly registered businesses are not independent of other new businesses. 
+-   H~0~: The location and timing of event points (newly registered businesses) are independent of all other events.
+-   H~1~: Location and timing of newly registered businesses are not independent of other new businesses.
 
 ### 6.3.1 Preparing spatio-temporal point process object
 
-The following code chunk extracts the business location coordinates from the respective sf data frames. 
+The following code chunk extracts the business location coordinates from the respective sf data frames.
+
 ```{r}
 cafes_coords <- st_coordinates(cafes_sf)
 foodstalls_coords <- st_coordinates(foodstalls_sf)
 restaurants_coords <- st_coordinates(restaurants_sf)
 ```
 
-Next, we create new data frames by combining the x- and y-coordinates and temporal event (`MONTH_NUM`). using `as.3dpoints()` from **stpp** package then converts the data frame to spatio-temporal object class. 
+Next, we create new data frames by combining the x- and y-coordinates and temporal event (`MONTH_NUM`). using `as.3dpoints()` from **stpp** package then converts the data frame to spatio-temporal object class.
 
 ```{r}
 cafes_stpp <- data.frame(
@@ -1833,7 +1839,7 @@ restaurants_stpp <- data.frame(
   as.3dpoints() 
 ```
 
-The following code chunks visualise the stpp objects to check correctness of the output. 
+The following code chunks visualises the *stpp* objects to check correctness of the output.
 
 ::: panel-tabset
 #### Cafes
@@ -1857,7 +1863,7 @@ plot(restaurants_stpp)
 
 ### 6.3. Computing and Plotting the Spatio-Temporal K Function
 
-Next, `STIKhat()` of **stpp** package computes the space-time inhomogenous K function. Finally, plotK() is used to visualise the output. 
+Next, `STIKhat()` of **stpp** package computes the space-time inhomogenous K function. Finally, plotK() is used to visualise the output.
 
 ::: panel-tabset
 #### Cafes
@@ -1865,6 +1871,7 @@ Next, `STIKhat()` of **stpp** package computes the space-time inhomogenous K fun
 ```{r}
 cafes_stik <- STIKhat(cafes_stpp)
 ```
+
 ```{r}
 plotK(cafes_stik)
 ```
@@ -1874,6 +1881,7 @@ plotK(cafes_stik)
 ```{r}
 foodstalls_stik <- STIKhat(foodstalls_stpp)
 ```
+
 ```{r}
 #| eval: true
 plotK(foodstalls_stik)
@@ -1884,33 +1892,28 @@ plotK(foodstalls_stik)
 ```{r}
 restaurants_stik <- STIKhat(restaurants_stpp)
 ```
+
 ```{r}
 plotK(restaurants_stik)
 ```
 :::
 
-The contours show high values for relatively small values of uu and vv. This suggests that clustering occurs at short spatial and temporal distances, meaning new F&B businesses occur close to each other in both space and time for all business types. 
+The contours show high values for relatively small values of uu and vv. This suggests that clustering occurs at short spatial and temporal distances, meaning new F&B businesses occur close to each other in both space and time for all business types.
 
 # 7. Key findings and potential further research
 
-1. F&B businesses tend to cluster together with similar and different business types. 
-  In particular, this clustering appears most pronounced in areas such as Chinatown, Outram, Orchard, Rochor, etc. This might indicate that the industry is resilient to relatively high levels of competition within the same area. On the other hand, there are areas where there have been no new F&B business registrations over the 19 month period of study. It might be useful to study the differences in attributes of areas where there is strong clustering and where businesses are avoiding to potentially uncover key factors which encourage/discourage the F&B industry.
+1.  F&B businesses tend to cluster together with similar and different business types. In particular, this clustering appears most pronounced in areas such as Chinatown, Outram, Orchard, Rochor, etc. This might indicate that the industry is resilient to relatively high levels of competition within the same area. On the other hand, there are areas where there have been no new F&B business registrations over the 19 month period of study. It might be useful to study the differences in attributes of areas where there is strong clustering and where businesses are avoiding to potentially uncover key factors which encourage/discourage the F&B industry.
 
-2. Consistent F&B hotspots but  declining intensity. 
-  While the areas mentioned above are consistent hotspots for F&B businesses, there is a decline in the number of new businesses in these areas. This may warrant further study to the reasons, whether it was due to a post-COVID-19 boom in 2024, or other reasons such as oversaturation of the market in the area, which may prompt future planning to make other areas more conducive for F&B businesses. 
+2.  Consistent F&B hotspots but declining intensity. While the areas mentioned above are consistent hotspots for F&B businesses, there is a decline in the number of new businesses in these areas. This may warrant further study to the reasons, whether it was due to a post-COVID-19 boom in 2024, or other reasons such as oversaturation of the market in the area, which may prompt future planning to make other areas more conducive for F&B businesses.
 
 # 8. Further Improvements
 
-This topic can be further expanded on in multiple ways to provide greater depth and strenght of analysis of the spatio-temporal patterns of newly registered F&B businesses in Singapore. 
+This topic can be further expanded on in multiple ways to provide greater depth and strenght of analysis of the spatio-temporal patterns of newly registered F&B businesses in Singapore.
 
-1. Focusing on other key regions in Singapore. 
-  This exercise focused only on a section of Singapore's central region. There are other areas which may be of interest to study, such as the Northeast region which is the most densely populated in Singapore. 
+1.  Focusing on other key regions in Singapore. This exercise focused only on a section of Singapore's central region. There are other areas which may be of interest to study, such as the Northeast region which is the most densely populated in Singapore.
 
-2. Focusing on different levels of areas in Singapore.
-  This exercise used a section of a region in Singapore. It may also be of use to study spatio temporal patterns at the planning area or subzone level to see if patterns change at different spatial levels. 
+2.  Focusing on different levels of areas in Singapore. This exercise used a section of a region in Singapore. It may also be of use to study spatio temporal patterns at the planning area or subzone level to see if patterns change at different spatial levels.
 
-3. Exploring other temporal aspects.
-  This exercise only studied the monthly patterns of newly registered F&B businesses. It may be useful to consider other timeframes, such as quarterly or yearly. These would also allow us to use more historical data than 19 months, which may make results more robust. 
+3.  Exploring other temporal aspects. This exercise only studied the monthly patterns of newly registered F&B businesses. It may be useful to consider other timeframes, such as quarterly or yearly. These would also allow us to use more historical data than 19 months, which may make results more robust.
 
-4. Incorporating other attribute/location data. 
-  It may be useful to incorporate other data which may be of interest, such as including the road networks or MRT locationsto consider the accessibility factor of the businesses, or possible barriers to new businesses such as average rent prices of each area. 
+4.  Incorporating other attribute/location data. It may be useful to incorporate other data which may be of interest, such as including the road networks or MRT locations to consider the accessibility factor of the businesses, or possible barriers to new businesses such as average rent prices of each area.
