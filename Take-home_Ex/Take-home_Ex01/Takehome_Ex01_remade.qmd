@@ -1506,6 +1506,8 @@ tmap_animation(all_maps, filename = "images/fnb_animated.gif",
                width = 1200, height = 1000, dpi = 300, delay=50)
 ```
 
+![](images/fnb_animated.gif)
+
 Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots.
 
 ## 6.2 Visualising STKDE by Month
