@@ -1466,6 +1466,7 @@ For all three combinations, significant clustering is consistently observed from
 # 6. Spatio-Temporal Point Pattern Analysis
 
 In this section, we aim to analyze the spatio-temporal distribution of newly registered F&B businesses. Incorporating both spatial and temporal dimensions, will allow us to investigate how F&B hotspots evolve over time in the core central region.
+![](images/fnb_animated.gif)
 
 ## 6.1 Visualising geographic distribution of F&B businesses by month
 
@@ -1473,7 +1474,7 @@ Using the `lapply()` function from base R, we will generate individual maps disp
 
 Then, we will create an animated gif using `tmap_animation()` and display the fig using the `include_graphics()` function from **knitr** package
 
-We will create an animated GIF from the series of maps stored in the all_maps object using the tmap_animation() function from the tmap package. After generating the GIF, we will display it using the `include_graphics()` function from the **knitr** package.
+We will create an animated GIF from the series of maps stored in the all_maps object using the tmap_animation() function from the tmap package. 
 
 ::: callout-note
 The code for this was modified based on the code in [Christover Manafe's Take Home Exercise 1](https://isss626-camanafe.netlify.app/take_home_ex/take_home_ex01/take_home_ex01#visualize-tnkde-map) visualising a temporal network kernel density estimation map
@@ -1503,11 +1504,6 @@ all_maps <- lapply(1:max(fnb_cr$MONTH_NUM), function(i) {
 # creating a gif with all the maps
 tmap_animation(all_maps, filename = "images/fnb_animated.gif", 
                width = 1200, height = 1000, dpi = 300, delay=50)
-```
-
-```{r}
-# display the gif
-knitr::include_graphics("images/fnb_animated.gif")
 ```
 
 Based on this gif, it is clear that there is a consistent hotspot towards the south of the core central region where newly registered F&B businesss are located. Only a handful of new businesses will locate themselves outside of this area each month, with no other particular emerging hotspots.
@@ -1778,21 +1774,16 @@ Finally, the resulting gif is displayed using `include_graphics() function` from
 ::: panel-tabset
 ##### Cafes
 
-```{r}
-knitr::include_graphics("images/cafes_animation.gif")
-```
+![](images/cafes_animation.gif)
 
 ##### Foodstalls
 
-```{r}
-knitr::include_graphics("images/foodstalls_animation.gif")
-```
+![](images/foodstalls_animation.gif)
 
 ##### Restaurants
 
-```{r}
-knitr::include_graphics("images/restaurants_animation.gif")
-```
+![](images/restaurants_animation.gif)
+
 :::
 
 As observed earlier, the general hotspot areas remain consistent over time. However, the intensity of the hotspot has decreased since January 2024. This indicates fewer new businesses are located in these areas recently, though the area remains popular. This is not surprising given we saw earlier that the monthly count of newly registered restaurants in the central region has been decreasing. This could be due to various reasons, such as oversaturation of the market in the area, increasing barriers to entry or decreasing appeal of the area.
