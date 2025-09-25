@@ -34,7 +34,7 @@ In this exercise, we will focus on various types of businesses in the F&B indust
 The following R packages are used for this project
 
 | Package | Use |
-|----|:---|
+|------------------------------------|:-----------------------------------|
 | sf | Provides functions for importing processing and wrangling geospatial data |
 | tidyverse | Contains several core packages such as ggplot2 for data visualisation, dplyr for data manipulation, tidyr for tidying data and readr for data import from file formats like CSV |
 | tmap | provides functions for plotting cartographic quality thematic maps |
@@ -1480,7 +1480,6 @@ The code for this was modified based on the code in [Christover Manafe's Take Ho
 :::
 
 ```{r}
-#| eval: false
 
 all_maps <- lapply(1:max(fnb_cr$MONTH_NUM), function(i) {
   
@@ -1612,8 +1611,6 @@ summary(st_kde_cafes)
 ```
 
 ```{r}
-#| eval: false
-
 # find upper limit of density range to ensure fixed range for color bar when plotting
 max_z <- 0
 for (t_slice in st_kde_cafes$z) {
@@ -1673,8 +1670,6 @@ summary(st_kde_foodstalls)
 ```
 
 ```{r}
-#| eval: false
-
 # find upper limit of density range to ensure fixed range for color bar when plotting
 max_z <- 0
 for (t_slice in st_kde_foodstalls$z) {
