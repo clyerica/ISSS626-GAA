@@ -211,6 +211,14 @@ window.Quarto = {
     <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex04/In-class_Ex04.html">
  <span class="dropdown-text">In-class Exercise 4</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex05/In-class_Ex05.html">
+ <span class="dropdown-text">In-class Exercise 5</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex05/In-class_Ex05b.html">
+ <span class="dropdown-text">In-class Exercise 5b</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -306,7 +314,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">September 26, 2025</p>
+      <p class="date-modified">September 27, 2025</p>
     </div>
   </div>
     
@@ -805,7 +813,7 @@ Note
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>lisa <span class="ot">&lt;-</span> lisa <span class="sc">%&gt;%</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">LISA_cluster =</span> <span class="fu">ifelse</span>(</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>      p_ii <span class="sc">&lt;</span> <span class="fl">0.05</span>,</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>      p_ii_sim <span class="sc">&lt;</span> <span class="fl">0.05</span>,</span>
 <span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.character</span>(mean), </span>
 <span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Insignificant"</span>),</span>
 <span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">LISA_cluster =</span> <span class="fu">factor</span>(</span>

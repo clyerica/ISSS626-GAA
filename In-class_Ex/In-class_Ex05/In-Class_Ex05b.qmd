@@ -1,0 +1,73 @@
+---
+title: "In Class Exercise 5b"
+format: html
+author: "Erica Chan"
+date: "27 September , 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(tidyverse, sf, sfdep, tmap, plotly, Kendall)
+```
+
+read in data
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial",
+                 layer="hunan")
+```
+
+```{r}
+GDPPC <- read_csv("data/aspatial/hunan_GDPPC.csv")
+```
+
+```{r}
+GDPPC <- left_join(hunan, GDPPC)
+```
+
+create time series cube
+
+```{r}
+GDPPC_st <- spacetime(GDPPC, hunan, 
+                      .loc_col="County",
+                      .time_col="Year")
+```
+
+```{r}
+is_spacetime_cube(GDPPC_st)
+```
+
+Deriving spatial weights
+
+```{r}
+GDPPC_nb <- GDPPC_st %>%
+  mutate(nb=st_contiguity(geometry),
+         wt=st_weights(nb, 
+                       style="W"),
+         .before=1 #place any new columns created at the very beginning of the data frame.
+  )
+  
+```
+
+```{r}
+gi_stars <- GDPPC_nb%>%
+  group_by(Year)%>%
+  mutate(gi_star=local_gstar_perm(
+    GDPPC, nb, wt))%>%
+  tidyr::unnest(gi_star)
+```
+
+Mann-Kendall test
+
+H~0~: No monotonic trend present
+
+H~1~: Monotonic trend detected
+
+\`\`{r}
+
+cbg=gi\_

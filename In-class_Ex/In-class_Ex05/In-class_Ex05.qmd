@@ -1,0 +1,142 @@
+---
+title: "In Class Exercise 05"
+format: html
+author: "Erica Chan"
+date: "27 September , 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+# Importing R packages
+
+```{r}
+pacman::p_load(tidyverse, sfdep, sf, tmap, spdep)
+```
+
+# Importing data into R
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan") %>% 
+  st_transform(crs = 32650)
+```
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+```{r}
+hunan_GDPPC <- left_join(hunan, hunan2012) %>%
+  select(1:4, 7, 15)
+```
+
+::: panel-tabset
+# sfdep
+Compute weights matrix with sfdep
+```{r}
+wm_q <- hunan_GDPPC %>%
+  mutate(nb=st_contiguity(geometry),
+         wt=st_weights(nb, 
+                       style="W"),
+         .before=1 #place any new columns created at the very beginning of the data frame.
+  )
+```
+
+# spdep
+
+Compute continuity matrix with spdep 
+```{r}
+wm_q_spdep <- poly2nb(hunan, queen=TRUE)
+```
+compute row standardised weight matrix with spdep
+```{r}
+rswm_q <- nb2listw(wm_q_spdep, 
+                   style="W", 
+                   zero.policy = TRUE)
+rswm_q
+```
+:::
+sfdep is an improvement on spdep because it can compute the weights matrix without intermediate steps, and it is easier to see the results in relation to the original table/locations without additional steps
+
+# Global Moran's I
+
+:::panel-tabset
+# sfdep
+Calculate Global Moran's I
+```{r}
+set.seed(1234) #ensure reproducibility of results
+global_moran_perm(
+  wm_q$GDPPC, 
+  wm_q$nb, 
+  wm_q$wt, 
+  nsim=99 #100 simulations
+  )
+```
+As p value <0.05, we reject the null hypothesis that the spatial distribution of GDP per capita resembles a random distirbution (ie are spatially independent). As the Moran's I statistic is greater than 0, we can infer that the GDP per capita is spatially clustered at the county level.
+
+#spdep
+```{r}
+bperm= moran.mc(hunan_GDPPC$GDPPC, 
+                listw=rswm_q, 
+                nsim=999, 
+                zero.policy = TRUE, 
+                na.action=na.omit)
+bperm
+```
+:::
+sfdep allows the test to be performed using different columns within a single table
+
+# Local Indicators of Spatial Association (LISA)
+
+```{r}
+set.seed(1234)
+lisa <- wm_q %>%
+  mutate(local_moran=local_moran(
+    GDPPC, nb, wt, nsim=99),
+    .before=1) %>%
+  unnest(local_moran) 
+```
+```{r}
+glimpse(lisa)
+```
+plot LISA 
+```{r}
+lisa <- lisa %>%
+  mutate(
+    LISA_cluster = ifelse(
+      p_ii_sim < 0.05,
+      as.character(mean), 
+      "Insignificant"), 
+    LISA_cluster = factor(
+      LISA_cluster,
+      levels = c("Insignificant", "Low-Low", "Low-High", "High-Low", "High-High")
+    )
+  )
+```
+```{r}
+#| fig-width: 10
+lisa_map <- tm_shape(lisa) + 
+  tm_polygons(
+    fill = "LISA_cluster",
+    fill.scale = tm_scale_categorical(
+      values = c(
+        "grey80",      # Insignificant
+        "blue",        # Low-Low
+        "lightblue",   # Low-High
+        "pink",        # High-Low
+        "red"          # High-High
+      )
+    ),
+    fill.legend = tm_legend(
+      title = "LISA Cluster",
+      position = tm_pos_in("left", "bottom"))
+  ) +
+  tm_borders() +
+  tm_title("Local Moran's I Clusters (p < 0.05)")
+lisa_map
+```
+This map shows statistically significant hot/cold spots.  
+

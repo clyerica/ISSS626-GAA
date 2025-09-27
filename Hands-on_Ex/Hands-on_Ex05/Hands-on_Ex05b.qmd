@@ -431,7 +431,7 @@ By default, the LISA classes are stored in *mean*, *median* and *pysal* fields o
 lisa <- lisa %>%
   mutate(
     LISA_cluster = ifelse(
-      p_ii < 0.05,
+      p_ii_sim < 0.05,
       as.character(mean), 
       "Insignificant"),
     LISA_cluster = factor(
