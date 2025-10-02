@@ -23,6 +23,8 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex05a.html"
           - text: "Local Measures of Spatial Autocorrelation"
             href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex05b.html"
+          - text: "Geographical Segmentation with Spatially Constrained Clustering Techniques"
+            href: "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex06.html"
       - text: "In-class Exercise"
         menu: 
           - text: "In-class Exercise 3a"

@@ -1,0 +1,15 @@
+{
+  "hash": "7b16f7df32c423129478955de1f556c6",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"In Class Exercise 5b\"\nformat: html\nauthor: \"Erica Chan\"\ndate: \"27 September , 2025\"\ndate-modified: \"last-modified\"\nexecute: \n  eval: false\n  echo: true\n  warning: false\n  freeze: true\n---\n\n\n::: {.cell}\n\n```{.r .cell-code}\npacman::p_load(tidyverse, sf, sfdep, tmap, plotly, Kendall)\n```\n:::\n\n\nread in data\n\n\n::: {.cell}\n\n```{.r .cell-code}\nhunan <- st_read(dsn = \"data/geospatial\",\n                 layer=\"hunan\")\n```\n:::\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nGDPPC <- read_csv(\"data/aspatial/hunan_GDPPC.csv\")\n```\n:::\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nGDPPC <- left_join(hunan, GDPPC)\n```\n:::\n\n\ncreate time series cube\n\n\n::: {.cell}\n\n```{.r .cell-code}\nGDPPC_st <- spacetime(GDPPC, hunan, \n                      .loc_col=\"County\",\n                      .time_col=\"Year\")\n```\n:::\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nis_spacetime_cube(GDPPC_st)\n```\n:::\n\n\nDeriving spatial weights\n\n\n::: {.cell}\n\n```{.r .cell-code}\nGDPPC_nb <- GDPPC_st %>%\n  mutate(nb=st_contiguity(geometry),\n         wt=st_weights(nb, \n                       style=\"W\"),\n         .before=1 #place any new columns created at the very beginning of the data frame.\n  )\n```\n:::\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\ngi_stars <- GDPPC_nb%>%\n  group_by(Year)%>%\n  mutate(gi_star=local_gstar_perm(\n    GDPPC, nb, wt))%>%\n  tidyr::unnest(gi_star)\n```\n:::\n\n\nMann-Kendall test\n\nH~0~: No monotonic trend present\n\nH~1~: Monotonic trend detected\n\n\\`\\`{r}\n\ncbg=gi\\_\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
