@@ -3,7 +3,7 @@ title: "Geographical Segmentation with Spatially Constrained Clustering Techniqu
 format: html
 author: "Erica Chan"
 date: "29 September , 2025"
-date-modified: "last-modified"
+date-modified: "last-modifie d"
 execute: 
   eval: true
   echo: true
