@@ -1,0 +1,153 @@
+---
+title: "In Class Exercise 06 - Take-home Exercise 2 kickoff"
+format: html
+author: "Erica Chan"
+date: "27 September , 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(tidyverse, sf, sfdep, tmap, knitr)
+```
+
+Import data
+
+```{r}
+BusStop <- st_read(dsn='data/BusStopLocation_Aug2025', 'BusStop')
+
+```
+
+```{r}
+mpsz_sf <- st_read("data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>% 
+  st_zm(drop = TRUE, what = "ZM") %>% st_transform(crs = 3414)
+```
+
+```{r}
+odbus=read_csv('data/origin_destination_bus_202508.csv')
+```
+
+# Prepare Bus Stop data
+
+check crs. `BusStop` EPSG code is incorrect (9001), so need to use st_transform to convert it to 3414.
+
+```{r}
+st_crs(BusStop)
+st_crs(mpsz_sf)
+
+```
+
+```{r}
+BusStop <- st_transform(BusStop, 3414)
+st_crs(BusStop)
+```
+
+Quick plot to check for correctness
+
+```{r}
+qtm(mpsz_sf) +
+qtm(BusStop, add=TRUE)
+```
+
+There are some bus stops outside of the Singapore boundaries (busses crossing the border to Johor Bahru). We can use st_join to extract bus stops only in Singapore and combine the mpsz sf dataframe with the bus stop sf dataframe. BusStop **must** be the first argument to preserve the point layer.
+
+```{r}
+BusStop_in_SG <- st_join(
+  BusStop, mpsz_sf,
+  join=st_within,
+  left=FALSE #remove rows without matches 
+)
+```
+
+check output again to ensure points outside of Singapore have been removed
+
+```{r}
+qtm(mpsz_sf) +
+qtm(BusStop_in_SG, add=TRUE)
+```
+
+# Prepare hexagon data
+
+Derive the analytical hexagon using st_make_grid. This function allows us to make grids of different shapes (Eg circle, square, etc).
+
+```{r}
+hexagon <- st_make_grid(mpsz_sf,
+                        cellsize=700, # distance between opposite edges of the hexagon
+                        what='polygon',
+                        square=FALSE)%>%
+  st_as_sf() #convert to tibbular / sf data frame, otherwise output will be in sfc data form
+```
+
+hexagon is a single column data frame, there is no id field.
+
+We want to limit the hexagons to areas where there are bus stops.
+
+```{r}
+qtm(hexagon)+
+qtm(mpsz_sf, add=TRUE) +
+qtm(BusStop_in_SG, add=TRUE)
+```
+
+filtering hexagons with bus stops
+
+```{r}
+hexagon$n_collisions = lengths(st_intersects( #calculates how many  bus stops intersect with hexagons
+  hexagon, BusStop_in_SG
+))
+
+hexagon <- filter(hexagon, n_collisions>0) #filters out hexagons which do not contain any bus 
+```
+
+```{r}
+qtm(mpsz_sf, fill='green')+
+  qtm(hexagon, add=TRUE)+
+  qtm(BusStop_in_SG, size = 0.2, add=TRUE)
+```
+
+assign IDs to each hexagon
+
+```{r}
+hexagon <- hexagon %>%
+  select(,-n_collisions) #remove n_collisions column to tidy up attribute table
+
+hexagon$HEX_ID <- sprintf(
+  "H%04d", seq_len(nrow(hexagon)))%>% 
+  as.factor()
+
+
+kable(head(hexagon)) #view the table 
+```
+
+# prepare trip generation data
+
+Cleaning the data
+
+```{r}
+trips <- odbus %>%
+  select(c(ORIGIN_PT_CODE, DAY_TYPE, TIME_PER_HOUR, TOTAL_TRIPS))%>%
+  rename(c(BUS_STOP_N=ORIGIN_PT_CODE, HOUR_OF_DAY=TIME_PER_HOUR, TRIPS=TOTAL_TRIPS))
+trips$BUS_STOP_N <- as.factor(trips$BUS_STOP_N)
+kable(head(trips))
+```
+
+Combine bus stop and hexagon layers
+
+```{r}
+bs_hex <- st_intersection(
+  BusStop, hexagon) %>% 
+  st_drop_geometry() %>% #drops hexagon geometry layer
+  select (c(BUS_STOP_N, HEX_ID)) #select attributes of interest
+          
+kable(head(bs_hex))
+```
+
+Add HEX_ID to bus trips data
+
+```{r}
+trips <- inner_join(trips, bs_hex) 
+kable(head(trips))
+```
