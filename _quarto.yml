@@ -25,6 +25,8 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex05b.html"
           - text: "Geographical Segmentation with Spatially Constrained Clustering Techniques"
             href: "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex06.html"
+          - text: "Calibrating Hedonic Pricing Model for Private Highrise Property with GWR Method"
+            href: "Hands-on_Ex/Hands-on_Ex07/Hands-on_Ex07.html"
       - text: "In-class Exercise"
         menu: 
           - text: "In-class Exercise 3a"
