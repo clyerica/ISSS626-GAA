@@ -204,3 +204,4 @@ tm_shape(condo_resale.tm) +
 ```
 
 There are 76 data points in tampines representing resales of condos in this planning area. The local R-square of these data points is relatively high ranging from 0.84 to 0.98, indicating that the gwr model is able to explain most of the variation in these data points. However, we can see one cluster of datapoints where the R-square value is relatively lower (in the Tampines West subzone). This may indicate that the model is relatively poorer at explaining the variation of prices of the condominiums in this cluster/subzone, and that there are other unidentified factors influencing price of resold condominiums here. On the other hand, all other data points in Tampines have relatively high R-square value, indicating the model can explian most of the price variation in these data points.
+
