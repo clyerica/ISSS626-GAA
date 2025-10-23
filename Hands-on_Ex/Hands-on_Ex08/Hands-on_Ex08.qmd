@@ -2,7 +2,7 @@
 title: "Geographically Weighted Predictive Modelling "
 format: html
 author: "Erica Chan"
-date: "October 22, 2025"
+date: "October 24, 2025"
 date-modified: "last-modified"
 execute: 
   eval: false
