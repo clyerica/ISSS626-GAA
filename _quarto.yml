@@ -48,7 +48,7 @@ website:
           - text: "Geospatial Analytics for Public Good"
             href: "Take-home_Ex/Take-home_Ex01/Takehome_Ex01_remade.html"
           - text: "Take Home Exercise 2: Urban Mobility"
-            href: "Take-home_Ex/Take-home_Ex02/Takehome_Ex02.html"
+            href: "Take-home_Ex/Take-home_Ex02/Take-home_Ex02.html"
       
     right:
       - href: index.qmd
