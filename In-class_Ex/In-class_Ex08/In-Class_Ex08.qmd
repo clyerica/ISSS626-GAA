@@ -1,0 +1,209 @@
+---
+title: "In-class Exercise 08"
+format: html
+author: "Erica Chan"
+date: "25 October , 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(httr, tidyverse, sf, tmap, jsonlite, progress,
+               spdep, GWmodel, SpatialML, rsample, Metrics,
+               knitr, spatialRF, randomForestExplainer)
+```
+
+-   httr - allows HTTP calls to OneMap API
+-   jsonlite - read json files to tibbular data frame
+-   sf - handles geospatial data
+-   tmap - handles maps
+-   progress - tracks computations
+
+## geocoding HDB resale data
+
+```{r}
+HDBresale <- read_csv("data/rawdata/HDBresale.csv") %>%
+                         filter(flat_type=="4 ROOM") %>%
+                         filter(month >= "2025-08" & month <="2025-10")
+```
+
+```{r}
+HDBresale$street_name<-gsub(
+  "ST\\.", "SAINT", 
+  HDBresale$street_name
+)
+```
+
+```{r}
+geocode <- function(block, streetname) {
+  base_url="https://onemap.gov.sg/api/common/elastic/search"
+  address<- paste(block, streetname, sep=" ")
+  query <- list("searchVal" = address, 
+                "returnGeom" = "Y",
+                "getAddrDetails" = "N",
+                "pageNum" = "1")
+  
+  res <- GET(base_url,  query = query)
+  restext <- content(res, as="text")
+  
+  output <- fromJSON(restext) %>%
+    as.data.frame() %>%
+    select(results.LATITUDE, results.LONGITUDE)
+  
+  return(output)
+}
+```
+
+```{r}
+#| eval: false
+HDBresale$LATITUDE <- 0
+HDBresale$LONGITUDE <- 0
+
+for (i in 1:nrow(HDBresale)){
+  temp_output <- geocode(HDBresale[i,4], HDBresale[i,5])
+  HDBresale$LATITUDE[i] <- temp_output$results.LATITUDE
+  HDBresale$LONGITUDE[i] <- temp_output$results.LONGITUDE
+}
+```
+
+```{r}
+#| eval: false
+write_rds(HDBresale, "data/rds/HDBresale.rds")
+```
+
+```{r}
+HDBresale<-read_rds('data/rds/HDBresale.rds')
+
+HDBresale_sf <- st_as_sf(HDBresale, 
+                         coords = c("LONGITUDE", "LATITUDE"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)
+```
+
+```{r}
+preschool=st_read("data/rawdata/PreSchoolsLocation.kml")%>%
+  st_transform(crs=3414)
+```
+
+```{r}
+within_350m <- st_is_within_distance(
+  HDBresale_sf, preschool, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(preschool_within350m = map_int(within_350m, length))
+```
+
+# modelling
+
+```{r}
+mdata <- read_rds("data/rawdata/mdata.rds")
+```
+
+data sampling - prorotype models with 10% sample of data. Selecting sample will be done by random using code chunk below
+
+```{r}
+set.seed(1234)
+HDB_sample <- mdata %>%
+  sample_n(1500)
+```
+
+## checking of overlapping points
+
+when using GWmodel to calibrate explanatory or predictive models, it is important to ensure no overlapping point features
+
+```{r}
+overlapping_points<- HDB_sample %>%
+  mutate(overlap=lengths(st_equals(., .))>1)
+```
+
+## spatial jittter
+
+jthe code chunk below uses st_jitter of **sf** package to move point features by 1m to avoid overlapping point features
+
+```{r}
+HDB_sample<-HDB_sample %>%
+  st_jitter(amount=1)
+```
+
+## Data sampling
+
+`initial_sample` of **rsample** package allows splitting of data into test and training sets.
+
+```{r}
+set.seed(1234)
+resale_split <- initial_split(HDB_sample, prop = 6.67/10)
+train_data <- training(resale_split)
+test_data <- testing(resale_split)
+```
+
+## model calibration
+
+```{r}
+#| eval: false
+bw_adaptive <- bw.gwr(
+  formula = resale_price ~ floor_area_sqm +
+    storey_order + remaining_lease_mths +
+    PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
+    PROX_MRT + PROX_PARK + PROX_MALL + 
+    PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
+    WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +
+    WITHIN_1KM_PRISCH,
+  data=train_data,
+  approach="CV",
+  kernel="gaussian",
+  adaptive=TRUE,
+  longlat=FALSE)
+```
+
+```{r}
+#| eval: false
+write_rds(bw_adaptive,"data/model/bw_adaptive.rds")
+```
+
+```{r}
+#| echo: false
+bw_adaptive <- read_rds("data/model/bw_adaptive.rds")
+```
+
+```{r}
+#| eval: false
+gwr_adaptive <- gwr.basic(
+  formula = resale_price ~ floor_area_sqm +
+    storey_order + remaining_lease_mths + 
+    PROX_CBD + PROX_ELDERLYCARE + 
+    PROX_HAWKER + PROX_MRT + PROX_PARK + 
+    PROX_MALL + PROX_SUPERMARKET +
+    WITHIN_350M_KINDERGARTEN +
+    WITHIN_350M_CHILDCARE + 
+    WITHIN_350M_BUS + WITHIN_1KM_PRISCH,
+  data=train_data,
+  bw=bw_adaptive, 
+  kernel = 'gaussian', 
+  adaptive=TRUE,
+  longlat = FALSE)
+
+write_rds(gwr_adaptive, 
+          "data/model/gwr_adaptive.rds")
+```
+
+```{r}
+#| echo: false
+
+gwr_adaptive <- read_rds("data/model/gwr_adaptive.rds")
+```
+
+```{r}
+gwr_adaptive
+```
+
+First, p-value should be small to ensure the model is significant.
+
+compare global and local model with adjusted r-square value, then AICc
+
+base (global) model should have adjusted r-square value of 0.6 and above to ensure it explains variation in dependent variable
+
+for local model, there is a significant improvement in adjusted R-square value. Justifies incorporation of explicit location and geographical data. Properties closer together are likely to be more similar than properties further apart.
