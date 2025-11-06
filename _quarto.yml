@@ -29,6 +29,8 @@ website:
             href: "Hands-on_Ex/Hands-on_Ex07/Hands-on_Ex07.html"
           - text: "Geographically Weighted Predictive Modelling"
             href: "Hands-on_Ex/Hands-on_Ex08/Hands-on_Ex08.html"
+          - text: "Modelling Geographical Accessibility"
+            href: "Hands-on_Ex/Hands-on_Ex09/Hands-on_Ex09.html"
       - text: "In-class Exercise"
         menu: 
           - text: "In-class Exercise 3a"
@@ -47,12 +49,16 @@ website:
             href: "In-class_Ex/In-class_Ex07/In-class_Ex07.html"
           - text: "In-class Exercise 8"
             href: "In-class_Ex/In-class_Ex08/In-class_Ex08.html"
+          - text: "In-class Exercise 9"
+            href: "In-class_Ex/In-class_Ex09/In-class_Ex09.html"
       - text: "Take-home Exercise"
         menu:
           - text: "Geospatial Analytics for Public Good"
             href: "Take-home_Ex/Take-home_Ex01/Takehome_Ex01_remade.html"
           - text: "Take Home Exercise 2: Urban Mobility"
             href: "Take-home_Ex/Take-home_Ex02/Take-home_Ex02.html"
+          - text: "Take Home Exercise 3: Predicting HDB resale prices"
+            href: "Take-home_Ex/Take-home_Ex03/Take-home_Ex03.html"
       
     right:
       - href: index.qmd
