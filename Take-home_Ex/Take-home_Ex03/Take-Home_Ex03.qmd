@@ -1,0 +1,718 @@
+---
+title: "Take-Home_Ex03"
+format: html
+---
+
+```{r}
+pacman::p_load(httr, tidyverse, sf, tmap, jsonlite, progress,
+               spdep, GWmodel, SpatialML, rsample, Metrics,
+               knitr, spatialRF, randomForestExplainer,
+               rvest, stringr, lubridate)
+```
+
+-   httr - allows HTTP calls to OneMap API
+-   jsonlite - read json files to tibbular data frame
+-   sf - handles geospatial data
+-   tmap - handles maps
+-   progress - tracks computations
+
+## geocoding HDB resale data
+
+```{r}
+HDBresale <- read_csv("data/hdb/HDBresale.csv") %>%
+                         filter(flat_type=="4 ROOM") %>%
+                         filter(month >= "2024-07" & month <="2025-09")
+```
+
+```{r}
+HDBresale$street_name<-gsub(
+  "ST\\.", "SAINT", 
+  HDBresale$street_name
+)
+```
+
+```{r}
+geocode <- function(block, streetname) {
+  base_url="https://onemap.gov.sg/api/common/elastic/search"
+  address<- paste(block, streetname, sep=" ")
+  query <- list("searchVal" = address, 
+                "returnGeom" = "Y",
+                "getAddrDetails" = "N",
+                "pageNum" = "1")
+  
+  res <- GET(base_url,  query = query)
+  restext <- content(res, as="text")
+  
+  output <- fromJSON(restext) %>%
+    as.data.frame() %>%
+    select(results.LATITUDE, results.LONGITUDE)
+  
+  return(output)
+}
+```
+
+```{r}
+#| eval: false
+HDBresale$LATITUDE <- 0
+HDBresale$LONGITUDE <- 0
+
+for (i in 1:nrow(HDBresale)){
+  temp_output <- geocode(HDBresale[i,4], HDBresale[i,5])
+  HDBresale$LATITUDE[i] <- temp_output$results.LATITUDE
+  HDBresale$LONGITUDE[i] <- temp_output$results.LONGITUDE
+}
+```
+
+```{r}
+#| eval: false
+write_rds(HDBresale, "data/rds/HDBresale.rds")
+```
+
+```{r}
+HDBresale<-read_rds('data/rds/HDBresale.rds')
+
+HDBresale_sf <- st_as_sf(HDBresale, 
+                         coords = c("LONGITUDE", "LATITUDE"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)
+```
+
+## Preparing attribute data
+
+::: panel-tabset
+### Storey level
+
+```{r}
+storey_mapping <- c("01 TO 03" = 1, "04 TO 06" = 2, "07 TO 09" = 3, 
+                    "10 TO 12" = 4, "13 TO 15" = 5, "16 TO 18" = 6,
+                    "19 TO 21" = 7, "22 TO 24" = 8, "25 TO 27" = 9,
+                    "28 TO 30" = 10, "31 TO 33" = 11, "34 TO 36" = 12,
+                    "37 TO 39" = 13, "40 TO 42" = 14, "43 TO 45" = 15, 
+                    "46 TO 48" = 16, "49 TO 51" = 17)
+HDBresale_sf$storey_order <- storey_mapping[HDBresale_sf$storey_range]
+```
+
+### Remaining Lease
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    years = as.numeric(str_extract(remaining_lease, "^\\d+")),
+    months = as.numeric(str_extract(remaining_lease, "\\d+(?=\\s+month)")) %>%
+      replace_na(0),
+    remaining_lease_months = (years * 12) + months
+  )
+```
+
+### Unit age
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    unit_age_months = (99 * 12) - remaining_lease_months
+  )
+```
+
+### Bus Stop
+
+```{r}
+busstop <- fromJSON("data/transport/BusStops.json") %>%
+  as.data.frame
+
+busstop_sf <- st_as_sf(busstop, 
+                         coords = c("value.Longitude", "value.Latitude"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)%>%
+  select(value.BusStopCode, geometry)
+```
+
+```{r}
+bs_within_350m <- st_is_within_distance(
+  HDBresale_sf, busstop_sf, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(bus_within350m = map_int(bs_within_350m, length))
+```
+
+### MRT
+
+```{r}
+mrt <- st_read('data/transport/LTAMRTStationExitKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_mrt = as.numeric(
+      st_distance(geometry,
+                  mrt[st_nearest_feature(
+                    geometry, mrt), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+```{r}
+mrt_within_350m <- st_is_within_distance(
+  HDBresale_sf, mrt, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(mrt_within350m = map_int(mrt_within_350m, length))
+```
+
+### Cycling Path
+
+```{r}
+cycling <- st_read('data/transport/CyclingPathNetworkKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_cycling = as.numeric(
+      st_distance(geometry,
+                  cycling[st_nearest_feature(
+                    geometry, cycling), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Taxi Stop
+
+```{r}
+taxi <- st_read('data/transport/LTATaxiStopKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_taxi = as.numeric(
+      st_distance(geometry,
+                  taxi[st_nearest_feature(
+                    geometry, taxi), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+
+t_within_350m <- st_is_within_distance(
+  HDBresale_sf, taxi, dist=350) #measurement is in meters
+```
+
+### Pre-schools
+
+```{r}
+preschool <- st_read("data/family-facility/PreSchoolsLocation.kml")%>%
+  st_transform(crs=3414)
+
+within_350m <- st_is_within_distance(
+  HDBresale_sf, preschool, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(preschool_within350m = map_int(within_350m, length))
+```
+
+### Kindergartens
+
+```{r}
+kindergartens <- st_read("data/family-facility/Kindergartens.kml") %>%
+  st_transform(crs=3414)
+```
+
+```{r}
+k_within_350m <- st_is_within_distance(
+  HDBresale_sf, kindergartens, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(kindergarten_within350m = map_int(k_within_350m, length))
+```
+
+### Child Care Services
+
+```{r}
+childcare <- st_read("data/family-facility/ChildCareServices.kml") %>%
+  st_transform(crs=3414)
+
+c_within_350m <- st_is_within_distance(
+  HDBresale_sf, childcare, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(childcare_within350m = map_int(c_within_350m, length))
+```
+
+### Primary Schools
+
+```{r}
+#| eval: false
+prischool=read_csv('data/family-facility/Generalinformationofschools.csv')
+```
+
+```{r}
+#| eval: false
+prischool$LATITUDE <- 0
+prischool$LONGITUDE <- 0
+
+for (i in 1:nrow(prischool)){
+  temp_output <- geocode(prischool[i,3],'')
+  prischool$LATITUDE[i] <- temp_output$results.LATITUDE
+  prischool$LONGITUDE[i] <- temp_output$results.LONGITUDE
+}
+```
+
+```{r}
+#| eval: false
+write_rds(prischool, 'data/rds/prischool.rds')
+```
+
+```{r}
+prischool<-read_rds('data/rds/prischool.rds')
+
+prischool_sf <- st_as_sf(prischool, 
+                         coords = c("LONGITUDE", "LATITUDE"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)
+```
+
+```{r}
+p_within_1km <- st_is_within_distance(
+  HDBresale_sf, prischool_sf, dist=1000) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(prischool_within1km = map_int(p_within_1km, length))
+```
+
+### Student Care Services
+
+```{r}
+studentcare <- st_read("data/family-facility/StudentCareServicesKML.kml") %>%
+  st_transform(crs=3414)
+
+sc_within_350m <- st_is_within_distance(
+  HDBresale_sf, studentcare, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(studentcare_within350m = map_int(sc_within_350m, length))
+```
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_studentcare = as.numeric(
+      st_distance(geometry,
+                  studentcare[st_nearest_feature(
+                    geometry, studentcare), ], 
+                  by_element = TRUE)/1000 #divide by 1000 to get measurement in km
+      )
+    )
+```
+
+### Elder Care Services
+
+```{r}
+eldercare <- st_read('data/family-facility/EldercareServicesKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_eldercare = as.numeric(
+      st_distance(geometry,
+                  eldercare[st_nearest_feature(
+                    geometry, eldercare), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### CBD
+
+```{r}
+mpsz <- read_rds('data/rds/mpsz_cl.rds')
+
+cbd <- mpsz %>%
+  filter(PLN_AREA_N=="DOWNTOWN CORE")%>%
+  st_union()
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_cbd = as.numeric(
+      st_distance(geometry,
+                  cbd[st_nearest_feature(
+                    geometry, cbd), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### CHAS clinics
+
+```{r}
+chas <- st_read('data/facilities/CHASClinics.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_CHAS = as.numeric(
+      st_distance(geometry,
+                  chas[st_nearest_feature(
+                    geometry, chas), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Eating Establishments
+
+```{r}
+food <- st_read("data/facilities/EatingEstablishments.kml") %>%
+  st_transform(crs=3414)
+
+f_within_350m <- st_is_within_distance(
+  HDBresale_sf, food, dist=350) #measurement is in meters
+
+HDBresale_sf <- HDBresale_sf %>% 
+  mutate(foodestablishments_within350m = map_int(f_within_350m, length))
+```
+
+### Exercise Park
+
+```{r}
+ep <- st_read('data/facilities/ParksSGKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_exercisepark = as.numeric(
+      st_distance(geometry,
+                  ep[st_nearest_feature(
+                    geometry, ep), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Gyms
+
+```{r}
+gyms <- st_read('data/facilities/GymsSGKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_gym = as.numeric(
+      st_distance(geometry,
+                  gyms[st_nearest_feature(
+                    geometry, gyms), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Hawker Centres
+
+```{r}
+hawker <- st_read('data/facilities/HawkerCentresKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_hawker = as.numeric(
+      st_distance(geometry,
+                  hawker[st_nearest_feature(
+                    geometry, hawker), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Hospitals
+
+```{r}
+hospitals <- read_csv('data/facilities/hospitals_with_coordinates.csv')
+hospitals_sf <- st_as_sf(hospitals, 
+                         coords = c("longitude", "latitude"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)
+```
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_hospital = as.numeric(
+      st_distance(geometry,
+                  hospitals_sf[st_nearest_feature(
+                    geometry, hospitals_sf), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Libraries
+
+```{r}
+library <- st_read('data/facilities/Libraries.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_library = as.numeric(
+      st_distance(geometry,
+                  library[st_nearest_feature(
+                    geometry, library), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### NEA Market/Food Centres
+
+```{r}
+market <- st_read('data/facilities/NEAMarketandFoodCentreKML.kml') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_market = as.numeric(
+      st_distance(geometry,
+                  market[st_nearest_feature(
+                    geometry, market), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Parks
+
+```{r}
+parks <- st_read('data/facilities/Parks.geojson') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_parks = as.numeric(
+      st_distance(geometry,
+                  parks[st_nearest_feature(
+                    geometry, parks), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Pharmacies
+
+```{r}
+pharmacy <- st_read('data/facilities/RetailpharmacylocationsKML.KML') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_pharmacy = as.numeric(
+      st_distance(geometry,
+                  pharmacy[st_nearest_feature(
+                    geometry, pharmacy), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Shopping Malls
+
+```{r}
+malls <- read_csv('data/facilities/singapore_malls_pois.csv') 
+
+malls_sf <- st_as_sf(malls, 
+                         coords = c("lon", "lat"), 
+                         crs = 4326) %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_mall = as.numeric(
+      st_distance(geometry,
+                  malls_sf[st_nearest_feature(
+                    geometry, malls_sf), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Supermarkets
+
+```{r}
+supermarket <- st_read('data/facilities/SupermarketsKML.KML') %>%
+  st_transform(crs=3414)
+
+HDBresale_sf <- HDBresale_sf %>%
+  mutate(
+    prox_supermarket = as.numeric(
+      st_distance(geometry,
+                  supermarket[st_nearest_feature(
+                    geometry, supermarket), ], 
+                  by_element = TRUE)
+      )/1000
+    )
+```
+
+### Neighbourhood Renewal Programme
+
+```{r}
+nrp <- st_read('data/hdb/NRPKML.kml') %>%
+  st_transform(crs=3414)
+```
+
+```{r}
+extract_kml_field <- function(html_text, field_name) {
+  if (is.na(html_text) || html_text == "") return(NA_character_)
+  
+  page <- read_html(html_text)
+  rows <- page %>% html_elements("tr")
+  
+  value <- rows %>%
+    keep(~ html_text2(html_element(.x, "th")) == field_name) %>%
+    html_element("td") %>%
+    html_text2()
+  
+  if (length(value) == 0) NA_character_ else value
+}
+```
+
+```{r}
+nrp_sf <- nrp %>%
+  mutate(
+    address = map_chr(Description, extract_kml_field, "NAME"),
+    est_cmpltn = map_chr(Description, extract_kml_field, "ESTMT_CNSTRN_CMPLTN")
+  ) %>%
+  select(-Name, -Description) %>%
+  mutate(
+    quarter_num = as.numeric(str_extract(est_cmpltn, "^\\d")),
+    year_num = str_extract(est_cmpltn, "\\d{4}$"),
+    end_month = case_when(
+      quarter_num == 1 ~ "03", # Q1 ends in March
+      quarter_num == 2 ~ "06", # Q2 ends in June
+      quarter_num == 3 ~ "09", # Q3 ends in September
+      quarter_num == 4 ~ "12", # Q4 ends in December
+      TRUE ~ NA_character_
+    ),
+    cmpltn_date = paste0(year_num, "-", end_month)
+  ) %>%
+  # Select the original column and the final date object
+  select(address, cmpltn_date, geometry)
+```
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  st_join(nrp_sf %>% select(cmpltn_date), left = TRUE) %>%
+  mutate(
+    nrp_completed = case_when(
+      !is.na(cmpltn_date) & (month > cmpltn_date) ~ 1,
+      TRUE ~ 0
+    )
+  ) %>%
+  select(-cmpltn_date)
+```
+:::
+
+### Cleaning up table
+
+```{r}
+HDBresale_sf <- HDBresale_sf %>%
+  select(month, resale_price, floor_area_sqm, storey_order, 
+         remaining_lease_months, prox_mrt, prox_cycling,
+         prox_taxi, prox_studentcare, prox_eldercare, prox_cbd,
+         prox_CHAS, prox_exercisepark, prox_gym, prox_hawker,
+         prox_hospital, prox_library, prox_market, prox_parks,
+         prox_pharmacy, prox_mall, prox_supermarket, 
+         bus_within350m, preschool_within350m, 
+         kindergarten_within350m, childcare_within350m, 
+         prischool_within1km, studentcare_within350m,
+         mrt_within350m, nrp_completed)
+```
+
+## Creating train/test data sets
+
+We will train our predictive model using HDB resale transaction data from July 2024 to June 2025, to predict resale prices from July to September 2025. The following code chunk splits the dataset into training and test data sets.
+
+```{r}
+HDB_train <- HDBresale_sf %>%
+  filter(month<='2025-06')
+HDB_test <- HDBresale_sf %>%
+  filter(month>'2025-06')
+```
+
+To prototype the models, we will use a smaller dataset to avoid excessively long run times for training and testing.
+
+```{r}
+set.seed(1234)
+train_sample <- HDB_train %>%
+  sample_n(5000)
+```
+
+## checking of overlapping points
+
+when using GWmodel to calibrate explanatory or predictive models, it is important to ensure no overlapping point features
+
+```{r}
+overlapping_points<- train_sample %>%
+  mutate(overlap=lengths(st_equals(., .))>1)
+num_overlapping<- sum(overlapping_points$overlap)
+num_overlapping
+```
+
+## spatial jittter
+
+jthe code chunk below uses st_jitter of **sf** package to move point features by 1m to avoid overlapping point features
+
+```{r}
+train_sample<-train_sample %>%
+  st_jitter(amount=1)
+HDB_train<- HDB_train %>%
+  st_jitter(amount = 1)
+```
+
+## Data sampling
+
+`initial_sample` of **rsample** package allows splitting of data into test and training sets.
+
+```{r}
+set.seed(1234)
+resale_split <- initial_split(train_sample, prop = 6.67/10)
+train_data <- training(resale_split)
+test_data <- testing(resale_split)
+```
+
+# Computing Correlation matrix
+
+```{r}
+#| fig-width: 10
+HDB_train_nogeo <- HDB_train %>%
+  st_drop_geometry() %>%
+  select(c(-(month)))
+corrplot::corrplot(cor(HDB_train_nogeo[, 2:17]), 
+                   diag = FALSE, 
+                   order = "AOE",
+                   tl.pos = "td", 
+                   tl.cex = 0.5, 
+                   method = "number", 
+                   type = "upper")
+```
+
+# Non Spatial Multiple Linear Regression 
+
+```{r}
+price_mlr <- lm(resale_price ~ floor_area_sqm + storey_order + 
+         remaining_lease_months + prox_mrt + prox_cycling +
+         prox_taxi + prox_studentcare + prox_eldercare + prox_cbd +
+         prox_CHAS + prox_exercisepark + prox_gym + prox_hawker +
+         prox_hospital + prox_library + prox_market + prox_parks +
+         prox_pharmacy + prox_mall + prox_supermarket + 
+         bus_within350m + preschool_within350m + 
+         kindergarten_within350m + childcare_within350m + 
+         prischool_within1km + studentcare_within350m +
+         mrt_within350m + nrp_completed,
+                data=HDB_train)
+summary(price_mlr)
+```
+
+# References
+
+1.  https://www.kaggle.com/datasets/muhdirshath/hospitals-in-singapore/data
+2.  https://www.kaggle.com/datasets/sunnysharma432/singapore-malls-pois/data
+3.  <https://www-jstor-org.libproxy.smu.edu.sg/stable/pdf/45389328>
+4.  <https://personal.ntu.edu.sg/qfeng/BianChenFengLi20200804paper.pdf>
+5.  <https://blogs.ubc.ca/zhuanlim/files/2022/07/Lim_Zhuan_A0224991X.pdf>

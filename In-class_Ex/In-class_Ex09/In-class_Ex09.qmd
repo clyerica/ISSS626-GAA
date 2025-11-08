@@ -1,0 +1,136 @@
+---
+title: "In-class_Ex09"
+format: html
+---
+
+```{r}
+pacman::p_load(tmap, SpatialAcc, sf, 
+               ggstatsplot, reshape2,
+               tidyverse)
+```
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_NO_SEA_PL")%>%
+  st_transform(crz=3414)
+hexagons <- st_read(dsn = "data/geospatial", layer = "hexagons") %>%
+  st_transform(crz=3414)
+eldercare <- st_read(dsn = "data/geospatial", layer = "ELDERCARE") %>%
+  st_transform(crz=3414) 
+```
+
+```{r}
+eldercare <- eldercare %>%
+  select(fid, ADDRESSPOS) %>%
+  mutate(capacity = 100)
+
+hexagons <- hexagons %>%
+  select(fid) %>%
+  mutate(demand = 100)
+```
+
+```{r}
+ODMatrix <- read_csv("data/aspatial/OD_Matrix.csv", skip = 0)
+```
+
+```{r}
+distmat <- ODMatrix %>%
+  select(origin_id, destination_id, total_cost) %>%
+  pivot_wider(names_from=destination_id,
+              values_from=total_cost)%>%
+  select(c(-c('origin_id')))
+
+distmat_km <- as.matrix(distmat/1000)
+```
+
+### computing Hansen's accessibility with various powers
+
+```{r}
+create_Hansen_map <- function(power){
+  acc_Hansen <- data.frame(ac(hexagons$demand,
+                            eldercare$capacity,
+                            distmat_km, 
+                            #d0 = 50,
+                            power = power, 
+                            family = "Hansen"))
+
+  colnames(acc_Hansen) <- "accHansen"
+  acc_Hansen <- as_tibble(acc_Hansen)
+  hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
+  
+  mapex <- st_bbox(hexagons)
+  
+  result <- tm_shape(hexagon_Hansen,
+           bbox = mapex) + 
+    tm_polygons(fill = "accHansen", 
+                fill.scale = tm_scale_intervals(
+                  style = "quantile",
+                  n = 10,
+                  values = "brewer.blues")) +
+  tm_shape(eldercare) +
+    tm_dots(size = 0.3,
+            fill = "red",
+            col = "black") +
+    tm_title(paste("Accessibility to eldercare: Hansen method ( power =", power ,")")) + 
+    tm_layout(frame = TRUE) +
+    tm_compass(type="8star", size = 2) +
+    tm_scalebar() +
+    tm_grid(alpha = 0.2)
+  
+  return (result)
+}
+
+```
+
+```{r}
+power_0.5<- create_Hansen_map(0.5)
+power_1 <- create_Hansen_map(1)
+power_1.5<- create_Hansen_map(1.5)
+power_2<-create_Hansen_map(2)
+power_2.5<-create_Hansen_map(2.5)
+
+```
+
+## Visualising the effect of power
+
+::: panel-tabset
+# 0.5
+
+```{r}
+#| fig-width: 8
+power_0.5
+```
+
+# 1
+
+```{r}
+#| fig-width: 8
+
+power_1
+```
+
+# 1.5
+
+```{r}
+#| fig-width: 8
+
+power_1.5
+```
+
+# 2
+
+```{r}
+#| fig-width: 8
+
+power_2
+```
+
+# 2.5
+
+```{r}
+#| fig-width: 8
+
+power_2.5
+```
+:::
+
+From the above visualisations, we can observe that increasing the power decreases the range of Hansen's accessibility values. This is because power indicates the distance decay, i.e. how much distance acts as a disincentive to access a destination. With lower power, distance is less of a disincentive (i.e., people are willing to travel further, and destinations which are further away will still contribute to the calculated accessibility value, hence the range of values increases. At power =0.5, Hansen accessibility value can reach over 1100. As power increases and distance represents a greater disincentive, the areas with low accessibility scores increase as destinations must be closer to a location to contribute to the accessibility value, and the upper limit of accessibility values will decrease. At power = 2.5, the highest Hansen accesibility value is about 135.
