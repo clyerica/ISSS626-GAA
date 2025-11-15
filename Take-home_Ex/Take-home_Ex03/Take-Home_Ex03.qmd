@@ -31,7 +31,7 @@ The following section imports the 25 datasets for this exercise using the releva
 -   `read_csv()` for csv files
 -   `st_read` for KML/shp files
 
-Spatial datasets were read in and converted to a sf dataframe using `st_as_sf` where necessary. The spatial datasets where also transformed to SVY21 coordinate reference system using `st_transform()`, for consistency across datasets. This allows us to perform visualisation, spatial analysis and distance computations later in our analysis. For datasets which include Z and/or M-coordinates, these coordinates were also dropped using `st_zm()` as these coordinates are unnecessary for our analysis which uses only 2d spatial geometries. Finally, the datasets are plotted to check that the point/line/polygon features are contained within the boundaries of Singapore's main island.
+Spatial datasets were read in and converted to a sf dataframe using `st_as_sf` where necessary. The spatial datasets where also transformed to SVY21 coordinate reference system using `st_transform()`, for consistency across datasets. This allows us to perform visualisation, spatial analysis and distance computations later in our analysis. For datasets which include Z-coordinates, these coordinates were also dropped using `st_zm()` as our analysis will only require2d spatial geometries. Finally, the datasets are plotted to check that the point/line/polygon features are contained within the boundaries of Singapore's main island.
 
 Additional data processing for specific datasets are specified within their tab.
 
@@ -124,10 +124,11 @@ busstop <- st_join(
   join=st_within, #returns TRUE for BusStop locations within the geometry of mpsz_sf
   left=FALSE #remove rows without matches 
 ) %>%
-  select(c("BUS_STOP_N", "LOC_DESC", "geometry"))
+  select(c("BUS_STOP_N", "geometry"))
 ```
 
 ```{r}
+tmap_mode('plot')
 qtm(mpsz)+
   qtm(busstop, size = 0.5,  fill='steelblue', add=TRUE)
 ```
@@ -137,7 +138,8 @@ qtm(mpsz)+
 ```{r}
 mrt <- st_read('data/transport/LTAMRTStationExitKML.kml') %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -149,7 +151,8 @@ qtm(mpsz)+
 
 ```{r}
 cycling <- st_read('data/transport/CyclingPathNetworkKML.kml') %>%
-  st_transform(crs=3414)
+  st_transform(crs=3414) %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -162,7 +165,8 @@ qtm(mpsz)+
 ```{r}
 taxi <- st_read('data/transport/LTATaxiStopKML.kml') %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -175,7 +179,8 @@ qtm(mpsz)+
 ```{r}
 preschool <- st_read("data/family-facility/PreSchoolsLocation.kml")%>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -188,7 +193,8 @@ qtm(mpsz)+
 ```{r}
 kindergartens <- st_read("data/family-facility/Kindergartens.kml") %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -201,7 +207,8 @@ qtm(mpsz)+
 ```{r}
 childcare <- st_read("data/family-facility/ChildCareServices.kml") %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -221,7 +228,8 @@ prischool <- read_csv('data/family-facility/Generalinformationofschools.csv')
 prischool <- prischool %>%
   filter(!str_detect(school_name, "SECONDARY", negate = FALSE), 
          (!str_detect(school_name, "JUNIOR COLLEGE", negate = FALSE)), 
-         !school_name %in%  c('ANGLO-CHINESE SCHOOL (BARKER ROAD)', 'ANGLO-CHINESE SCHOOL (INDEPENDENT)', 'ASSUMPTION ENGLISH SCHOOL', 'ASSUMPTION PATHWAY SCHOOL', 'CHIJ KATONG CONVENT', "CHIJ ST. JOSEPH'S CONVENT", "CHIJ ST. THERESA'S CONVENT", "CRESCENT GIRLS' SCHOOL", "GAN ENG SENG SCHOOL", "HAI SING CATHOLIC SCHOOL", "HWA CHONG INSTITUTION", "MILLENNIA INSTITUTE", "NORTHLIGHT SCHOOL", "RAFFLES INSTITUTION", "SCHOOL OF SCIENCE AND TECHNOLOGY, SINGAPORE", "SCHOOL OF THE ARTS, SINGAPORE", "SINGAPORE CHINESE GIRLS' SCHOOL", "SINGAPORE SPORTS SCHOOL", "ST ANDREW'S SCHOOL (JUNIOR)", "ST. JOSEPH'S INSTITUTION", "ST. PATRICK'S SCHOOL", "TANJONG KATONG GIRLS' SCHOOL","VICTORIA SCHOOL", "BUKIT PANJANG GOVT. HIGH SCHOOL", "CHUNG CHENG HIGH SCHOOL (MAIN)", "CHUNG CHENG HIGH SCHOOL (YISHUN)", "DUNMAN HIGH SCHOOL", "HOLY INNOCENTS' HIGH SCHOOL", "NAN CHIAU HIGH SCHOOL", "NAN HUA HIGH SCHOOL", "NANYANG GIRLS' HIGH SCHOOL", "NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE", "PRESBYTERIAN HIGH SCHOOL", "RIVER VALLEY HIGH SCHOOL", "ANGLICAN HIGH SCHOOL"))
+         !school_name %in%  c('ANGLO-CHINESE SCHOOL (BARKER ROAD)', 'ANGLO-CHINESE SCHOOL (INDEPENDENT)', 'ASSUMPTION ENGLISH SCHOOL', 'ASSUMPTION PATHWAY SCHOOL', 'CHIJ KATONG CONVENT', "CHIJ ST. JOSEPH'S CONVENT", "CHIJ ST. THERESA'S CONVENT", "CRESCENT GIRLS' SCHOOL", "GAN ENG SENG SCHOOL", "HAI SING CATHOLIC SCHOOL", "HWA CHONG INSTITUTION", "MILLENNIA INSTITUTE", "NORTHLIGHT SCHOOL", "RAFFLES INSTITUTION", "SCHOOL OF SCIENCE AND TECHNOLOGY, SINGAPORE", "SCHOOL OF THE ARTS, SINGAPORE", "SINGAPORE CHINESE GIRLS' SCHOOL", "SINGAPORE SPORTS SCHOOL", "ST ANDREW'S SCHOOL (JUNIOR)", "ST. JOSEPH'S INSTITUTION", "ST. PATRICK'S SCHOOL", "TANJONG KATONG GIRLS' SCHOOL","VICTORIA SCHOOL", "BUKIT PANJANG GOVT. HIGH SCHOOL", "CHUNG CHENG HIGH SCHOOL (MAIN)", "CHUNG CHENG HIGH SCHOOL (YISHUN)", "DUNMAN HIGH SCHOOL", "HOLY INNOCENTS' HIGH SCHOOL", "NAN CHIAU HIGH SCHOOL", "NAN HUA HIGH SCHOOL", "NANYANG GIRLS' HIGH SCHOOL", "NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE", "PRESBYTERIAN HIGH SCHOOL", "RIVER VALLEY HIGH SCHOOL", "ANGLICAN HIGH SCHOOL")) %>%
+  select(1,3)
 ```
 
 ### Student Care Services
@@ -229,7 +237,8 @@ prischool <- prischool %>%
 ```{r}
 studentcare <- st_read("data/family-facility/StudentCareServicesKML.kml") %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -242,7 +251,8 @@ qtm(mpsz)+
 ```{r}
 eldercare <- st_read('data/family-facility/EldercareServicesKML.kml') %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -255,7 +265,8 @@ qtm(mpsz)+
 ```{r}
 chas <- st_read('data/facilities/CHASClinics.kml') %>%
   st_transform(crs=3414) %>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -268,7 +279,8 @@ qtm(mpsz)+
 ```{r}
 food <- st_read("data/facilities/EatingEstablishments.kml") %>%
   st_transform(crs=3414)%>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 There are some esting establishments which fall outside the borders of Singapore's main island. The following code chunk uses `st_join` to join both sf objects by `st_within`, which will extract point features of establishments within Singapore's main island.
@@ -292,7 +304,8 @@ qtm(mpsz)+
 ```{r}
 hawker <- st_read('data/facilities/HawkerCentresKML.kml') %>%
   st_transform(crs=3414)%>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -303,7 +316,8 @@ qtm(mpsz)+
 ### Hospitals
 
 ```{r}
-hospitals <- read_csv('data/facilities/hospitals_with_coordinates.csv')
+hospitals <- read_csv('data/facilities/hospitals_with_coordinates.csv') %>%
+  select(1,'latitude', 'longitude')
 hospitals_sf <- st_as_sf(hospitals, 
                          coords = c("longitude", "latitude"), 
                          crs = 4326) %>%
@@ -320,7 +334,8 @@ qtm(mpsz)+
 ```{r}
 library <- st_read('data/facilities/Libraries.kml') %>%
   st_transform(crs=3414)%>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -333,7 +348,8 @@ qtm(mpsz)+
 ```{r}
 market <- st_read('data/facilities/NEAMarketandFoodCentreKML.kml') %>%
   st_transform(crs=3414)%>%
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -345,7 +361,8 @@ qtm(mpsz)+
 
 ```{r}
 parks <- st_read('data/facilities/Parks.geojson') %>%
-  st_transform(crs=3414)
+  st_transform(crs=3414) %>%
+  select(1,'geometry')
 ```
 
 There are some parks which fall outside the borders of Singapore's main island (for example, on Pulau Ubin or Pulau Sekudu). The following code chunk uses `st_join` to join both sf objects by `st_within`, which will extract only parks within Singapore's main island.
@@ -356,7 +373,7 @@ parks <- st_join(
   join=st_within, 
   left=FALSE 
 ) %>%
-  select(c("OBJECTID_1", "L_CODE","NAME", "geometry"))
+  select(c("OBJECTID_1", "geometry"))
 ```
 
 ```{r}
@@ -369,7 +386,8 @@ qtm(mpsz)+
 ```{r}
 pharmacy <- st_read('data/facilities/RetailpharmacylocationsKML.KML') %>%
   st_transform(crs=3414) %>% 
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -380,7 +398,8 @@ qtm(mpsz)+
 ### Shopping Malls
 
 ```{r}
-malls <- read_csv('data/facilities/singapore_malls_pois.csv') 
+malls <- read_csv('data/facilities/singapore_malls_pois.csv') %>%
+  select(1,'lon', 'lat')
 
 malls_sf <- st_as_sf(malls, 
                          coords = c("lon", "lat"), 
@@ -399,7 +418,8 @@ qtm(mpsz)+
 ```{r}
 supermarket <- st_read('data/facilities/SupermarketsKML.KML') %>%
   st_transform(crs=3414) %>% 
-  st_zm(drop = TRUE, what = "ZM")
+  st_zm(drop = TRUE, what = "ZM") %>%
+  select(1,'geometry')
 ```
 
 ```{r}
@@ -411,7 +431,7 @@ qtm(mpsz)+
 
 ```{r}
 nrp <- st_read('data/hdb/NRPKML.kml') %>%
-  st_transform(crs=3414)
+  st_transform(crs=3414) 
 ```
 
 ```{r}
@@ -529,12 +549,10 @@ qtm(mpsz)+
 In this section, we will perform feature engineering for each HDB resale datapoint. We will create structural attributes (factors attributable to the HDB flat itself), and locational attributes (factors dependent on proximity to certain amenities/facilities or on the availability of amenities/facilities within a certain distance, i.e., accessibility to that amenity/facility)
 
 -   structural attributes: the code to derive each are explained in its respective tab
--   proximity attributes: derived using `st_nearest feature(x,y)` of **sf** package, which finds the nearest spatial feature in `y` for each feature in `x`, and `st_distance(x,y, by_element=TRUE)` which calculates the distance between each corresponding row of `x` and `y`. As the distance is returned in metres, the value is divided by 1000 to return the from the resold flatdistance to the nearest facility/amenity in kilometres. Refer to the figure below for how the shortest distance is calculated between different types of features. 
--  accessibility attributes: derived using `st_is_within_distance(x,y,dist)` which returns a list of features from `x` which a part of falls within a specified maximum distance `dist` (in metres) of a feature in `y`. `map_int()` from **purr** package from **tidyverse** is then used to apply `length()` to each list and count the number of features which falls within the specified distance of the resold flat. 
-[![Explanation of shortest distance calculation between different types of features (How Proximity Tools Calculate Distance—ArcGIS pro | Documentation, 2025)](images/distance.png)](https://pro.arcgis.com/en/pro-app/3.3/tool-reference/analysis/how-near-analysis-works.htm)
+-   proximity attributes: derived using `st_nearest feature(x,y)` of **sf** package, which finds the nearest spatial feature in `y` for each feature in `x`, and `st_distance(x,y, by_element=TRUE)` which calculates the distance between each corresponding row of `x` and `y`. As the distance is returned in metres, the value is divided by 1000 to return the from the resold flatdistance to the nearest facility/amenity in kilometres. Refer to the figure below for how the shortest distance is calculated between different types of features.
+-   accessibility attributes: derived using `st_is_within_distance(x,y,dist)` which returns a list of features from `x` which a part of falls within a specified maximum distance `dist` (in metres) of a feature in `y`. `map_int()` from **purr** package from **tidyverse** is then used to apply `length()` to each list and count the number of features which falls within the specified distance of the resold flat. [![Explanation of shortest distance calculation between different types of features (How Proximity Tools Calculate Distance—ArcGIS pro \| Documentation, 2025)](images/distance.png)](https://pro.arcgis.com/en/pro-app/3.3/tool-reference/analysis/how-near-analysis-works.htm)
 
-::: panel-tabset 
-
+::: panel-tabset
 ### Month sold order
 
 ```{r}
@@ -939,10 +957,11 @@ HDBresale_sf <- HDBresale_sf %>%
   ) %>%
   select(-cmpltn_date)
 ```
-
 :::
 
 ## Cleaning up table
+
+The following code chunk cleans up the `HDBresale_sf` dataframe to only the attributes of interest for our analysis in this exercise. This makes the data more readable and is more storage efficient.
 
 ```{r}
 #| eval: false
@@ -968,7 +987,7 @@ HDBresale_sf <- read_rds('data/rds/HDBresale_sf.rds')
 
 We will train our predictive model using HDB resale transaction data from July 2024 to June 2025, to predict resale prices from July to September 2025. The following code chunk splits the dataset into training and test data sets,
 
-GWmodel package struggles with overly large datasets.
+GWmodel package struggles with overly large datasets. As `HDBresale_sf`
 
 ```{r}
 #| eval: false
@@ -1036,7 +1055,7 @@ tm_facets(by = "REGION_N",
             drop.units=TRUE) +
 tm_shape(HDBresale_region, group = "REGION_N")+
     tm_dots(fill='resale_price',
-            fill.scale = tm_scale_intervals(style = "pretty", n=10),
+            fill.scale = tm_scale_intervals(style = "pretty"),
             fill.legend = tm_legend(),
             fill.chart = tm_chart_histogram())+
 tm_facets(by = "REGION_N",
@@ -1169,7 +1188,7 @@ HDB_test_p<- cbind(
   select(resale_price, mlr_pred)
 ```
 
-## RMSE calculation 
+## RMSE calculation
 
 ```{r}
 mlr_rmse<- rmse(HDB_test_p$resale_price, 
@@ -1250,6 +1269,7 @@ HDB_test_p<- cbind(HDB_test_p, gwr_pred_df$prediction) %>%
 ```
 
 ## RMSE Calculation
+
 ```{r}
 gwr_rmse <- rmse(HDB_test$resale_price, 
      HDB_test_p$gwr_pred)
@@ -1373,6 +1393,7 @@ HDB_test_p<- cbind(HDB_test_p, rf_pred_df$prediction) %>%
 ```
 
 ## Calculate RMSE
+
 ```{r}
 rf_rmse <- rmse(HDB_test_p$resale_price, 
      HDB_test_p$rf_pred)
@@ -1383,6 +1404,7 @@ rf_rmse
 # Geographically Weighted Random Forest Model
 
 ## Compute adaptive bandwidth
+
 ```{r}
 #| eval: false
 
@@ -1428,6 +1450,7 @@ gwRF_adaptive
 ```
 
 ## Predictions
+
 ```{r}
 coords_test <- read_rds('data/rds/coords_test.rds')
 
@@ -1457,14 +1480,20 @@ HDB_test_p <- cbind(HDB_test_p, gwrf_pred)
 ```
 
 ## Calculation of RMSE
+
 ```{r}
 gwrf_rmse <- rmse(HDB_test_p$resale_price, 
-     HDB_test_p$GRF_pred)
+     HDB_test_p$gwrf_pred)
  
 gwrf_rmse
 ```
 
 # Evaluation of models
+
+In this section, we will evaluate the performance of the 4 models used to predict prices of 4-room HDB flats from July to September 2025.
+
+The following code chunk creates a dataframe
+
 ```{r}
 rmse_results <- data.frame(
   Model = c("Multiple Linear Regression",
@@ -1483,6 +1512,7 @@ datatable(rmse_results)%>%
 ```
 
 ## Visualising Residuals Distribution
+
 ```{r}
 residuals<- HDB_test_p %>%
   mutate(mlr=resale_price-mlr_pred,
@@ -1496,7 +1526,7 @@ residuals_long <- residuals %>%
   pivot_longer(
     cols = c(mlr, gwr, rf, gwrf), 
     names_to = "Model",
-    values_to = "Residuals"
+    values_to = "Residuals" 
   ) %>%
   mutate(
     Model = factor(Model, levels = c("mlr", "gwr", "rf", "gwrf"))
@@ -1549,9 +1579,10 @@ get_residual_map <- function(model){
                     free.coords=TRUE, 
                     drop.units=TRUE) +
         tm_shape(sf, group = "REGION_N")+
-            tm_dots(fill='Residuals',  
+            tm_dots(fill='Residuals',
                     fill.scale = tm_scale_intervals(
-                      style = "pretty", 
+                      style = "fixed",
+                      breaks = c(-300000,-200000,-100000,0,100000,200000,300000,400000),
                       values = "-tableau.red_blue_diverging"))+
         tm_facets(by = "REGION_N",
                     nrow = 2, 
@@ -1564,19 +1595,25 @@ get_residual_map <- function(model){
 
 ::: panel-tabset
 ### MLR
+
 ```{r}
   get_residual_map('mlr')
 ```
+
 ### GWR
+
 ```{r}
   get_residual_map('gwr')
 ```
 
 ### RF
+
 ```{r}
   get_residual_map('rf')
 ```
+
 ### GWRF
+
 ```{r}
   get_residual_map('gwrf')
 ```
@@ -1591,6 +1628,5 @@ get_residual_map <- function(model){
 2.  https://www.kaggle.com/datasets/sunnysharma432/singapore-malls-pois/data
 3.  <https://www-jstor-org.libproxy.smu.edu.sg/stable/pdf/45389328>
 4.  <https://personal.ntu.edu.sg/qfeng/BianChenFengLi20200804paper.pdf>
-5.  <https://blogs.ubc.ca/zhuanlim/files/2022/07/Lim_Zhuan_A0224991X.pdf>
-How proximity tools calculate distance—ArcGIS Pro | Documentation. (2025). Arcgis.com. https://pro.arcgis.com/en/pro-app/3.3/tool-reference/analysis/how-near-analysis-works.htm
-
+5.  <https://blogs.ubc.ca/zhuanlim/files/2022/07/Lim_Zhuan_A0224991X.pdf> How proximity tools calculate distance—ArcGIS Pro \| Documentation. (2025). Arcgis.com. https://pro.arcgis.com/en/pro-app/3.3/tool-reference/analysis/how-near-analysis-works.htm
+:::
