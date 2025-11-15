@@ -5,7 +5,7 @@ author: "Erica Chan"
 date: "October 24, 2025"
 date-modified: "last-modified"
 execute: 
-  eval: false
+  eval: true
   echo: true
   warning: false
   freeze: true
@@ -82,7 +82,6 @@ This code chunk performs 3 tasks:
 -   After all the R packages have been installed, they will be loaded.
 
 ```{r}
-#| eval: true
 pacman::p_load(sf, spdep, GWmodel, SpatialML, 
                tmap, rsample, Metrics, tidyverse,
                sp)
@@ -95,7 +94,6 @@ pacman::p_load(sf, spdep, GWmodel, SpatialML,
 Reading the input data sets. It is in simple feature data frame.
 
 ```{r}
-#| eval: true
 mdata <- read_rds("data/rawdata/mdata.rds")
 ```
 
@@ -104,11 +102,14 @@ mdata <- read_rds("data/rawdata/mdata.rds")
 The entire data are split into training and test data sets with 65% and 35% respectively by using *initial_split()* of **rsample** package. rsample is one of the package of tigymodels.
 
 ```{r}
+#| eval: false
 set.seed(1234) 
 resale_split <- initial_split(mdata,
                               prop = 6.5/10,) 
-train_data <- training(resale_split) 
-test_data <- testing(resale_split)
+train_data <- training(resale_split) %>%
+  sample_n(3000)
+test_data <- testing(resale_split) %>%
+  sample_n(2000)
 write_rds(train_data, "data/model/train_data.rds") 
 write_rds(test_data, "data/model/test_data.rds")
 ```
@@ -118,7 +119,6 @@ write_rds(test_data, "data/model/test_data.rds")
 Before loading the predictors into a predictive model, it is always a good practice to use correlation matrix to examine if there is sign of multicolinearity.
 
 ```{r}
-#| eval: true
 #| fig_width: 10
 mdata_nogeo <- mdata %>%
   st_drop_geometry()
@@ -138,7 +138,6 @@ As all correlation values in the correlation matrix above are below 0.8, there i
 ## 6 Retrieving the Stored Data
 
 ```{r}
-#| eval: true
 train_data = read_rds("data/model/train_data.rds")
 test_data = read_rds("data/model/test_data.rds")
 ```
@@ -170,6 +169,8 @@ The code chunk below determines the adaptive bandwidth using CV method
 :::
 
 ```{r}
+#| eval: false
+
 bw_adaptive <- bw.gwr(
   formula = resale_price ~ floor_area_sqm +
     storey_order + remaining_lease_mths +
@@ -187,16 +188,16 @@ bw_adaptive <- bw.gwr(
 write_rds(bw_adaptive, "data/model/bw_adaptive.rds")
 ```
 
-The result shows that 40 neighbour points will be the optimal bandwidth to be used if adaptive bandwidth is used for this data set.
+The result shows that 21 neighbour points will be the optimal bandwidth to be used if adaptive bandwidth is used for this data set.
 
 ### 8.2 Constructing the adaptive bandwidth gwr model
 
 First, let us call the saved bandwidth by using the code chunk below.
 
 ```{r}
-#| eval: true
 bw_adaptive <- read_rds(
   "data/model/bw_adaptive.rds")
+bw_adaptive
 ```
 
 Now, we can go ahead to calibrate the gwr-based hedonic pricing model by using adaptive bandwidth and Gaussian kernel as shown in the code chunk below.
@@ -227,20 +228,19 @@ write_rds(gwr_adaptive,
 The code chunk below will be used to retrieve the saved gwr model object.
 
 ```{r}
-#| eval: true
 gwr_adaptive <- read_rds("data/model/gwr_adaptive.rds")
 ```
 
 The code below can be used to display the model output.
 
 ```{r}
-#| eval: true
 gwr_adaptive
 ```
 
 ### 8.4 Computing adaptive bandwidth for the test data
 
 ```{r}
+#| eval: false
 gwr_bw_test_adaptive <- bw.gwr(
   formula = resale_price ~ floor_area_sqm +
     storey_order + remaining_lease_mths +
@@ -262,7 +262,11 @@ write_rds(gwr_bw_test_adaptive,
 ### 8.5 Computing Predicted values of the test data
 
 ```{r}
+gwr_bw_test_adaptive <- read_rds("data/model/gwr_bw_test_adaptive.rds")
+gwr_bw_test_adaptive
+```
 
+```{r}
 train_data_sp <- as(train_data, "Spatial")
 test_data_sp <- as(test_data, "Spatial")
 gwr_pred <- gwr.predict(
@@ -275,7 +279,7 @@ gwr_pred <- gwr.predict(
     WITHIN_1KM_PRISCH,
   data = train_data_sp, 
   predictdata = test_data_sp, 
-  bw = 40,
+  bw = 21,
   kernel = "gaussian",
   adaptive = TRUE,#calculates kernel where bw corresponds with number of nearest neighbours
   p = 2, #power of Minkowski distabnce
@@ -287,10 +291,6 @@ write_rds(gwr_pred,
           "data/model/gwr_pred.rds")
 
 ```
-
-::: callout-warning
-Error in gw.dist(fd.locat, focus = i, p, theta, longlat) : No regression point is fixed
-:::
 
 ## 9 Calibrating Random Forest Model
 

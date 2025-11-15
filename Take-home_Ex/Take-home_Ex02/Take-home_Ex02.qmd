@@ -42,7 +42,7 @@ Two geospatial data will be used in this study, they are:
 # Import R Packages
 
 | Package | Use |
-|-------------------|:----------------------------------------------------|
+|----|:---|
 | sf | Provides functions for importing processing and wrangling geospatial data |
 | tidyverse | Contains several core packages such as ggplot2 for data visualisation, dplyr for data manipulation, tidyr for tidying data and readr for data import from file formats like CSV |
 | tmap | provides functions for plotting cartographic quality thematic maps |
@@ -1004,7 +1004,7 @@ lisa_map_hol
 In this section, we will perform EHSA to identify and categorise the areas behaviour of clusters of high or low values of a phenomenon over time. EHSA combines the Getis-Ord Gi\* statistic for spatial clustering analysis, and the Mann-Kendall trend test, a non-parametric trend analysis, to detect trends in these clusters. This process allows for the detection of patterns such as new hot spots, persistent trends, or diminishing cold spots across different confidence levels. EHSA calculates the Gi\* of a location across time periods, and evaluates this series to categorise the pattern using the Mann-Kendall statistic. Together, these create 17 possible patterns to understand the pattern over time, as follows (:
 
 | Pattern Name | Definition |
-|------------------------|------------------------------------------------|
+|----|----|
 | **No Pattern Detected** | Does not fall into any of the hot or cold spot patterns defined below. |
 | **New Hot Spot** | A location that is statistically significant hot spot for the final time step and has never been a statistically significant hot spot before. |
 | **Consecutive Hot Spot** | A location with a single uninterrupted run of at least two statistically significant hot spot bins in the final time-step intervals. The location has never been a statistically significant hot spot prior to the final hot spot run and less than 90 percent of all bins are statistically significant hot spots. |
